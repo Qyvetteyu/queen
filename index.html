@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>翡冷翠秘宫 · 自由纪元 | 平衡版</title>
+    <title>翡冷翠秘宫 · 自由纪元 | AI反馈优化版</title>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* 样式与之前相同，省略以节省篇幅，实际保留完整样式 */
+        /* 样式与原版相同，略，保留完整样式 */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { background: #1a1510; font-family: 'Montserrat', sans-serif; padding: 12px; background-image: radial-gradient(circle at 20% 30%, rgba(70,50,40,0.6) 0%, #0f0c09 100%); min-height: 100vh; }
         .game-container { max-width: 1200px; margin: 0 auto; }
@@ -16,7 +16,7 @@
         @media (min-width: 600px) { .stat-grid { grid-template-columns: repeat(6, 1fr); } }
         .stat-tile { background: rgba(47, 39, 33, 0.85); backdrop-filter: blur(4px); border-radius: 20px; padding: 8px 5px; text-align: center; color: #ffefcf; font-size: 0.7rem; }
         .stat-number { font-size: 1.3rem; font-weight: 700; font-family: 'Cormorant Garamond'; line-height: 1.2; }
-        .info-bar { text-align: center; background: rgba(0, 0, 0, 0.75); border-radius: 40px; padding: 8px 12px; margin-bottom: 12px; color: #ffefb9; font-weight: bold; font-size: 0.75rem; backdrop-filter: blur(4px); box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+        .info-bar { text-align: center; background: rgba(0, 0, 0, 0.75); border-radius: 40px; padding: 8px 12px; margin-bottom: 12px; color: #ffefb9; font-weight: bold; font-size: 0.75rem; backdrop-filter: blur(4px); }
         .info-bar i { margin-right: 4px; color: #e6c384; }
         .info-bar span { margin: 0 4px; font-weight: 600; }
         @media (max-width: 600px) { .info-bar { font-size: 0.65rem; padding: 6px 8px; } }
@@ -44,6 +44,8 @@
         .char-profile { background: #f5e8d4; border-radius: 20px; padding: 12px; margin-bottom: 12px; }
         .stat-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
         .stat-badge { background: #c7a25230; padding: 4px 10px; border-radius: 30px; font-size: 0.7rem; }
+        .loading-text { color: #e6c384; font-style: italic; }
+        .error-text { color: #f5a97f; }
         @media (max-width: 600px) {
             body { padding: 8px; }
             .stat-tile { padding: 5px; font-size: 0.6rem; }
@@ -59,7 +61,7 @@
 <div class="game-container">
     <div style="text-align:center; margin-bottom:12px;">
         <h1 style="font-family:'Cormorant Garamond'; color:#f7e5c2; font-size:1.5rem;">⚜️ 翡冷翠秘宫 · 自由纪元 ⚜️</h1>
-        <p style="color:#dbbc8c; font-size:0.7rem;">平衡版 | 月薪5000 | 深度培养 | 数值限制</p>
+        <p style="color:#dbbc8c; font-size:0.7rem;">AI反馈优化 | 月薪5000 | 深度培养 | 数值限制</p>
     </div>
 
     <div id="creatorSection" class="glass-card" style="padding:16px; margin-bottom:16px;">
@@ -113,6 +115,7 @@
                         <button id="sleepBtn" class="action-sm" style="flex:1;">😴 睡觉</button>
                     </div>
                 </div>
+                <!-- 结果显示区域，将显示AI返回的叙事或错误信息 -->
                 <div id="freeActionResult" class="event-area" style="display:none;"></div>
                 <div id="prisonActions" class="event-area" style="display:none; background:#4a2a2a;"></div>
                 <div id="ghostActions" class="event-area" style="display:none; background:#2a2a4a;"></div>
@@ -137,7 +140,7 @@
 
 <div id="charModal" class="modal"><div class="modal-content" id="charModalContent"></div></div>
 
-<!-- 自主事件结果模态框 -->
+<!-- 自主事件结果模态框（保留弹窗） -->
 <div id="autonomousEventModal" class="modal" style="display:none;">
     <div class="modal-content" id="autonomousEventContent">
         <div id="autonomousEventText" style="white-space:pre-wrap; margin-bottom:12px;"></div>
@@ -207,7 +210,7 @@ let game = {
 };
 let storyMemories=[], privateNote="";
 
-// 三大区域及子地点（同前，省略详细）
+// 三大区域及子地点（与之前相同，略写）
 let zones = [
     { id:"palace", name:"皇宫", children:[
         { id:"bedroom", name:"寝宫", desc:"你的私密居所" },
@@ -234,7 +237,6 @@ let zones = [
     ]}
 ];
 
-// 官职体系
 const rankTree = [
     { name:"随从", salary:100, reqCombat:0, reqIntel:0, reqDipl:0, reqLoyalty:50 },
     { name:"侍从", salary:200, reqCombat:20, reqIntel:20, reqDipl:20, reqLoyalty:60 },
@@ -287,20 +289,20 @@ function advanceDay(extraDays=1){
         }
     }
     updateDateDisplay();
-    // 入狱/处死/修行等事件（同上，省略）
+    // 入狱/处死/修行逻辑（略，同前）
     if(game.gameState==="free" && !game.inExile && game.prestige < -100){
         if(game.negativePrestigeStartYear===null) game.negativePrestigeStartYear=game.year;
         if(game.year - game.negativePrestigeStartYear >= 1 && game.king.affection < 70){
             game.gameState="prison";
             game.currentZone="皇宫"; game.currentLocation="dungeon";
-            alert("⚔️ 声望过低且国王爱意不足，你被打入大牢！");
+            showResultMessage("⚔️ 声望过低且国王爱意不足，你被打入大牢！", true);
             renderLocations(); updateLocationDisplay();
         }
     } else if(game.prestige >= -100) game.negativePrestigeStartYear=null;
     if(game.gameState==="prison" && game.prestige <= -100 && game.king.affection < 20 && game.escapeAttempts >= 3){
         game.gameState="dead";
-        alert("💀 国王下令处死！你已死亡。");
-        if(confirm("化为幽灵继续游荡？")){ game.gameState="ghost"; alert("👻 你化为怨灵"); }
+        showResultMessage("💀 国王下令处死！你已死亡。", true);
+        if(confirm("化为幽灵继续游荡？")){ game.gameState="ghost"; showResultMessage("👻 你化为怨灵", true); }
         else resetGame();
         updateUI();
     }
@@ -310,15 +312,14 @@ function advanceDay(extraDays=1){
             game.inExile=false;
             game.gameState="free";
             game.currentZone="皇宫"; game.currentLocation="bedroom";
-            alert("🏛️ 修行期满，你从神殿返回皇宫。");
+            showResultMessage("🏛️ 修行期满，你从神殿返回皇宫。", true);
             renderLocations(); updateLocationDisplay();
         }
     }
 }
 function applyMonthlySalary(){
-    // 皇后月薪 5000（原50000）
     game.gold += 5000;
-    alert(`💰 月初结算：皇后获得月薪5000金币，现有金币 ${game.gold}`);
+    showResultMessage(`💰 月初结算：皇后获得月薪5000金币，现有金币 ${game.gold}`, false);
     let totalPaid = 0;
     for(let c of characters){
         if(c.salary>0 && !c.inPrison){
@@ -333,7 +334,6 @@ function applyMonthlySalary(){
     document.getElementById('treasury').innerText = game.treasury;
 }
 function updateDateDisplay(){ document.getElementById('fullDate').innerText=getFullDate(); }
-function addSystemMsg(msg){ console.log(msg); }
 
 // ==================== 地点渲染 ====================
 function renderLocations(){
@@ -388,7 +388,7 @@ function updateLocationDetail(){
     document.getElementById('locationPeopleList').innerHTML=html||"<span>无人</span>";
 }
 
-// ==================== AI调用核心（含数值限制） ====================
+// ==================== AI调用核心 ====================
 let apiConfig={url:"https://api.openai.com/v1/chat/completions",key:"",model:"gpt-3.5-turbo",promptTemplate:localStorage.getItem("queen_prompt")||PLAYER_ACTION_PROMPT};
 function loadApiConfig(){
     let s=localStorage.getItem("queen_api_cfg"); if(s){ try{ let c=JSON.parse(s); apiConfig={...apiConfig,...c}; }catch(e){} }
@@ -405,13 +405,13 @@ function saveApiConfig(){
     apiConfig.promptTemplate=document.getElementById('promptTemplate').value;
     localStorage.setItem("queen_api_cfg",JSON.stringify({url:apiConfig.url,key:apiConfig.key,model:apiConfig.model}));
     localStorage.setItem("queen_prompt",apiConfig.promptTemplate);
-    alert("配置已保存");
+    showResultMessage("AI配置已保存", false);
 }
 function resetDefaultPrompt(){
     document.getElementById('promptTemplate').value=PLAYER_ACTION_PROMPT;
     apiConfig.promptTemplate=PLAYER_ACTION_PROMPT;
     localStorage.setItem("queen_prompt",PLAYER_ACTION_PROMPT);
-    alert("已恢复默认模板（含数值限制）");
+    showResultMessage("已恢复默认模板（含数值限制）", false);
 }
 function buildPrompt(intent, isPlayerAction=true, eventContext="", involvedChars=[]){
     let tpl = isPlayerAction ? apiConfig.promptTemplate : AUTONOMOUS_EVENT_PROMPT;
@@ -450,7 +450,6 @@ function parseAIResponse(novel){
             let m=p.match(/(声望|密谋|金币|国王爱意|国王怀疑)([+\-]\d+)/);
             if(m){
                 let key=m[1], rawVal=parseInt(m[2]);
-                // 限制每次变动绝对值不超过5
                 let val = Math.min(5, Math.max(-5, rawVal));
                 if(key==='声望') delta.prestige=val;
                 if(key==='密谋') delta.intrigue=val;
@@ -483,34 +482,60 @@ function parseAIResponse(novel){
     return {delta,newChars,newLocs,memory:mem,cleaned:novel,relationChanges};
 }
 async function callAI(promptText){
-    if(!apiConfig.url) throw new Error("未配置API");
-    let headers={"Content-Type":"application/json"};if(apiConfig.key)headers["Authorization"]=`Bearer ${apiConfig.key}`;
-    let res=await fetch(apiConfig.url,{method:"POST",headers,body:JSON.stringify({model:apiConfig.model,messages:[{role:"user",content:promptText}],temperature:0.85,max_tokens:2000})});
-    if(!res.ok)throw new Error(`API错误:${res.status}`);
-    let data=await res.json();let novel=data.choices?.[0]?.message?.content||"生成失败";
+    if(!apiConfig.url) throw new Error("未配置API地址");
+    let headers={"Content-Type":"application/json"};
+    if(apiConfig.key) headers["Authorization"] = `Bearer ${apiConfig.key}`;
+    let res = await fetch(apiConfig.url, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify({
+            model: apiConfig.model,
+            messages: [{ role: "user", content: promptText }],
+            temperature: 0.85,
+            max_tokens: 2000
+        })
+    });
+    if(!res.ok){
+        let errorMsg = `API错误: ${res.status}`;
+        try{
+            let errData = await res.json();
+            errorMsg = errData.error?.message || errorMsg;
+        }catch(e){}
+        throw new Error(errorMsg);
+    }
+    let data = await res.json();
+    let novel = data.choices?.[0]?.message?.content;
+    if(!novel) throw new Error("AI未返回有效内容");
     return parseAIResponse(novel);
 }
 async function fallbackAI(promptText){
-    return new Promise(r=>setTimeout(()=>{ let novel=`模拟叙事:${promptText.substring(0,100)}...\n【数值变动:声望+2,密谋+1】\n【剧情记忆:随机事件】`; r(parseAIResponse(novel)); },200));
+    await new Promise(r => setTimeout(r, 300));
+    let novel = `模拟叙事: ${promptText.substring(0,100)}...\n【数值变动:声望+2,密谋+1】\n【剧情记忆:离线模拟事件】`;
+    return parseAIResponse(novel);
 }
 async function generateEvent(promptText, isAutonomous=false){
+    let res = null;
     try{
-        let res=await callAI(promptText);
-        applyDelta(res.delta);
-        for(let c of res.newChars) addNewCharacter(c);
-        for(let l of res.newLocs) addNewLocation(l);
-        for(let rc of res.relationChanges) applyRelationChange(rc.name, rc.newRel);
-        if(res.memory) storyMemories.unshift({time:getFullDate(),location:`${game.currentZone}·${game.currentLocation}`,intent:isAutonomous?"自主事件":"自由行动",content:res.cleaned,summary:res.memory});
-        if(storyMemories.length>40) storyMemories.pop();
-        return res;
-    } catch(e){ console.error(e); return null; }
+        res = await callAI(promptText);
+    }catch(e){
+        console.warn("API失败，使用离线模拟", e);
+        showResultMessage(`⚠️ AI调用失败: ${e.message}，已切换至离线模拟模式`, true);
+        res = await fallbackAI(promptText);
+    }
+    applyDelta(res.delta);
+    for(let c of res.newChars) addNewCharacter(c);
+    for(let l of res.newLocs) addNewLocation(l);
+    for(let rc of res.relationChanges) applyRelationChange(rc.name, rc.newRel);
+    if(res.memory) storyMemories.unshift({time:getFullDate(),location:`${game.currentZone}·${game.currentLocation}`,intent:isAutonomous?"自主事件":"自由行动",content:res.cleaned,summary:res.memory});
+    if(storyMemories.length>40) storyMemories.pop();
+    return res;
 }
 function applyDelta(delta){
-    game.prestige=Math.min(100,Math.max(-200,game.prestige+(delta.prestige||0)));
-    game.intrigue=Math.min(100,Math.max(0,game.intrigue+(delta.intrigue||0)));
-    game.gold=Math.max(0,game.gold+(delta.gold||0));
-    game.king.affection=Math.min(100,Math.max(0,game.king.affection+(delta.kingAffection||0)));
-    game.king.suspicion=Math.min(100,Math.max(0,game.king.suspicion+(delta.kingSuspicion||0)));
+    game.prestige = Math.min(100, Math.max(-200, game.prestige + (delta.prestige||0)));
+    game.intrigue = Math.min(100, Math.max(0, game.intrigue + (delta.intrigue||0)));
+    game.gold = Math.max(0, game.gold + (delta.gold||0));
+    game.king.affection = Math.min(100, Math.max(0, game.king.affection + (delta.kingAffection||0)));
+    game.king.suspicion = Math.min(100, Math.max(0, game.king.suspicion + (delta.kingSuspicion||0)));
 }
 function addNewCharacter(c){
     if(!characters.some(ch=>ch.name===c.name)){
@@ -525,14 +550,14 @@ function addNewCharacter(c){
     }
 }
 function addNewLocation(l){
-    let zoneObj=zones.find(z=>z.name===l.zone);
+    let zoneObj = zones.find(z=>z.name===l.zone);
     if(zoneObj && !zoneObj.children.some(cl=>cl.id===l.id)){
-        zoneObj.children.push({id:l.id,name:l.name,desc:l.desc});
+        zoneObj.children.push({id:l.id, name:l.name, desc:l.desc});
         renderLocations();
     }
 }
 function applyRelationChange(name, newRel){
-    let ch=characters.find(c=>c.name===name);
+    let ch = characters.find(c=>c.name===name);
     if(ch){
         if(newRel==="lover"){ ch.relationship="lover"; ch.isLover=true; }
         else if(newRel==="enemy") ch.relationship="enemy";
@@ -540,35 +565,33 @@ function applyRelationChange(name, newRel){
     }
 }
 
-// ==================== 晋升逻辑 ====================
+// ==================== 晋升与培养（同前） ====================
 function canPromote(c){
     if(c.rankIdx<0 || c.rankIdx>=rankTree.length-1) return false;
-    let n=rankTree[c.rankIdx+1];
+    let n = rankTree[c.rankIdx+1];
     return c.combat>=n.reqCombat && c.intelligence>=n.reqIntel && c.diplomacy>=n.reqDipl && c.loyalty>=n.reqLoyalty;
 }
 function promoteRank(c){
     if(!canPromote(c)){
-        alert(`${c.name} 条件不足，无法晋升。`);
+        showResultMessage(`${c.name} 条件不足，无法晋升。`, true);
         return false;
     }
     c.rankIdx++;
-    let r=rankTree[c.rankIdx];
-    c.salary=r.salary;
-    alert(`${c.name} 成功晋升为 ${r.name}！月薪 ${r.salary} 金。`);
+    let r = rankTree[c.rankIdx];
+    c.salary = r.salary;
+    showResultMessage(`${c.name} 成功晋升为 ${r.name}！月薪 ${r.salary} 金。`, false);
     return true;
 }
-
-// ==================== 深度培养系统（削弱版） ====================
 function trainAttributeDeep(c, attr, costGold, days, gain, description){
     if(game.gold < costGold){
-        alert(`金币不足，需要 ${costGold} 金`);
+        showResultMessage(`金币不足，需要 ${costGold} 金`, true);
         return false;
     }
     if(!confirm(`${description}\n需要 ${costGold} 金币，耗时 ${days} 天。确定执行吗？`)) return false;
     game.gold -= costGold;
     advanceDay(days);
     c[attr] = Math.min(100, (c[attr]||0) + gain);
-    alert(`🎓 培养完成！${c.name} 的 ${attr==='combat'?'武艺':(attr==='intelligence'?'智谋':'外交')} +${gain}，花费 ${costGold} 金，经过 ${days} 天。`);
+    showResultMessage(`🎓 培养完成！${c.name} 的 ${attr==='combat'?'武艺':(attr==='intelligence'?'智谋':'外交')} +${gain}，花费 ${costGold} 金，经过 ${days} 天。`, false);
     updateUI();
     autoSave();
     return true;
@@ -577,20 +600,30 @@ function showTrainDialog(c){
     let choice = prompt(`选择培养项目（${c.name}）：
 1- 武艺训练：1500金，边境军营锻炼5天，武艺+3
 2- 智谋修习：1800金，藏书塔研读7天，智谋+3
-3- 外交历练：2000金，出使邻国10天，外交+3
-注意：忠诚与好感只能通过剧情事件提升，不可培养。`);
+3- 外交历练：2000金，出使邻国10天，外交+3`);
     if(choice === "1") trainAttributeDeep(c, 'combat', 1500, 5, 3, "派往边境军营，跟随骑士团训练武艺。");
     else if(choice === "2") trainAttributeDeep(c, 'intelligence', 1800, 7, 3, "进入藏书塔，研读古代谋略典籍。");
     else if(choice === "3") trainAttributeDeep(c, 'diplomacy', 2000, 10, 3, "作为特使出访邻国，学习外交礼仪与谈判技巧。");
     else alert("取消培养");
 }
 
-// ==================== 自主事件（带确认/取消/重新生成） ====================
+// ==================== 显示消息到 freeActionResult（不弹alert） ====================
+function showResultMessage(msg, isError = false){
+    let div = document.getElementById('freeActionResult');
+    if(div){
+        div.style.display = 'block';
+        div.innerHTML = `<div class="${isError ? 'error-text' : ''}" style="white-space:pre-wrap;">${msg}</div><button class="action-sm" onclick="this.parentElement.style.display='none'">关闭</button>`;
+    }else{
+        alert(msg);
+    }
+}
+
+// ==================== 自主事件（保留弹窗） ====================
 let pendingAutonomousResult = null;
 async function triggerAutonomousEventWithUI(){
     if(game.gameState!=="free" || game.inExile) return;
-    let lovers=characters.filter(c=>c.relationship==="lover" && !c.inPrison);
-    let confidants=characters.filter(c=>c.isConfidant && !c.inPrison);
+    let lovers = characters.filter(c=>c.relationship==="lover" && !c.inPrison);
+    let confidants = characters.filter(c=>c.isConfidant && !c.inPrison);
     let type=0;
     if(lovers.length>=2 && Math.random()<0.3) type=1;
     else if(confidants.length>=1 && Math.random()<0.3) type=2;
@@ -600,11 +633,11 @@ async function triggerAutonomousEventWithUI(){
         involved=[lovers[idx1], lovers[idx2]];
         context=`两位情人 ${involved[0].name} 和 ${involved[1].name} 因皇后产生了嫉妒与争执。`;
     } else if(type===2 && confidants.length>=1){
-        let c=confidants[Math.floor(Math.random()*confidants.length)];
+        let c = confidants[Math.floor(Math.random()*confidants.length)];
         involved=[c];
         context=`心腹 ${c.name} 正在秘密策划一件有利于皇后的大事。`;
     } else {
-        let others=characters.filter(c=>c.name!=="腓特烈四世" && !c.inPrison && c.relationship!=="lover");
+        let others = characters.filter(c=>c.name!=="腓特烈四世" && !c.inPrison && c.relationship!=="lover");
         if(others.length>=2){
             let idx1=Math.floor(Math.random()*others.length), idx2; do{ idx2=Math.floor(Math.random()*others.length); }while(idx1===idx2);
             involved=[others[idx1], others[idx2]];
@@ -633,7 +666,7 @@ function confirmAutonomous(){
         moveCharactersRandomly();
         updateUI();
         autoSave();
-        alert(`自主事件已记录：${pendingAutonomousResult.memory}`);
+        showResultMessage(`自主事件已记录：${pendingAutonomousResult.memory}`, false);
     }
     pendingAutonomousResult = null;
     document.getElementById('autonomousEventModal').style.display = 'none';
@@ -641,13 +674,13 @@ function confirmAutonomous(){
 function cancelAutonomous(){
     pendingAutonomousResult = null;
     document.getElementById('autonomousEventModal').style.display = 'none';
-    alert("已取消，该事件未记录。");
+    showResultMessage("已取消，该事件未记录。", false);
 }
 async function regenerateAutonomous(){
     if(pendingAutonomousResult){
-        // 重新生成逻辑（与原相同，略）
-        let lovers=characters.filter(c=>c.relationship==="lover" && !c.inPrison);
-        let confidants=characters.filter(c=>c.isConfidant && !c.inPrison);
+        // 重新生成（复用上下文，简单重新调用）
+        let lovers = characters.filter(c=>c.relationship==="lover" && !c.inPrison);
+        let confidants = characters.filter(c=>c.isConfidant && !c.inPrison);
         let type=0;
         if(lovers.length>=2 && Math.random()<0.3) type=1;
         else if(confidants.length>=1 && Math.random()<0.3) type=2;
@@ -657,11 +690,11 @@ async function regenerateAutonomous(){
             involved=[lovers[idx1], lovers[idx2]];
             context=`两位情人 ${involved[0].name} 和 ${involved[1].name} 因皇后产生了嫉妒与争执。`;
         } else if(type===2 && confidants.length>=1){
-            let c=confidants[Math.floor(Math.random()*confidants.length)];
+            let c = confidants[Math.floor(Math.random()*confidants.length)];
             involved=[c];
             context=`心腹 ${c.name} 正在秘密策划一件有利于皇后的大事。`;
         } else {
-            let others=characters.filter(c=>c.name!=="腓特烈四世" && !c.inPrison && c.relationship!=="lover");
+            let others = characters.filter(c=>c.name!=="腓特烈四世" && !c.inPrison && c.relationship!=="lover");
             if(others.length>=2){
                 let idx1=Math.floor(Math.random()*others.length), idx2; do{ idx2=Math.floor(Math.random()*others.length); }while(idx1===idx2);
                 involved=[others[idx1], others[idx2]];
@@ -680,20 +713,17 @@ async function regenerateAutonomous(){
     }
 }
 
-// ==================== 人物交互（完整反馈） ====================
+// ==================== 人物交互 ====================
 function showPersonModal(id){
-    let c=characters.find(c=>c.id===id); if(!c) return;
-    let modal=document.getElementById('charModal');
-    let content=document.getElementById('charModalContent');
+    let c = characters.find(c=>c.id===id); if(!c) return;
+    let modal = document.getElementById('charModal');
+    let content = document.getElementById('charModalContent');
     let isKing = (c.name === "腓特烈四世");
     let rankDisplay = isKing ? "国王" : (c.rankIdx>=0 ? rankTree[c.rankIdx].name : "无");
-    let attrs=`<span class="stat-badge">⚔️武艺:${c.combat||30}</span><span class="stat-badge">📚智谋:${c.intelligence||50}</span><span class="stat-badge">🤝外交:${c.diplomacy||50}</span><span class="stat-badge">❤️好感:${c.affection}</span><span class="stat-badge">⚔️忠诚:${c.loyalty}</span><span class="stat-badge">💰财产:${c.wealth||0}</span><span class="stat-badge">🏅${rankDisplay}</span>`;
-    let relationBadge=c.relationship==="lover"?"💕情人":c.relationship==="enemy"?"⚠️仇敌":"🤝结识";
-    let extraButtons = '';
-    if(c.relationship === "lover"){
-        extraButtons = `<button id="breakUpBtn" class="action-sm">💔 分手</button>`;
-    }
-    content.innerHTML=`
+    let attrs = `<span class="stat-badge">⚔️武艺:${c.combat||30}</span><span class="stat-badge">📚智谋:${c.intelligence||50}</span><span class="stat-badge">🤝外交:${c.diplomacy||50}</span><span class="stat-badge">❤️好感:${c.affection}</span><span class="stat-badge">⚔️忠诚:${c.loyalty}</span><span class="stat-badge">💰财产:${c.wealth||0}</span><span class="stat-badge">🏅${rankDisplay}</span>`;
+    let relationBadge = c.relationship==="lover"?"💕情人":c.relationship==="enemy"?"⚠️仇敌":"🤝结识";
+    let extraButtons = (c.relationship === "lover") ? `<button id="breakUpBtn" class="action-sm">💔 分手</button>` : '';
+    content.innerHTML = `
         <div class="char-profile">
             <h3>${c.name} <span style="font-size:0.7rem">(${c.type})</span> <span class="stat-badge">${relationBadge}</span></h3>
             <div class="stat-row">${attrs}</div>
@@ -720,18 +750,22 @@ function showPersonModal(id){
         <div id="personResult" class="event-area" style="display:none; margin-top:0.5rem"></div>
     `;
     modal.style.display='flex';
-    document.getElementById('personActionBtn').onclick=()=>{ let intent=document.getElementById('personActionInput').value; if(intent){ closeModal(); performAction(`对${c.name}: ${intent}`); } };
-    document.getElementById('personRandomBtn').onclick=()=>{ closeModal(); performAction(`基于当前局势与${c.name}发生随机事件`); };
-    document.getElementById('requestMoneyBtn').onclick=()=>{ requestMoney(c); closeModal(); };
-    if(document.getElementById('spendNightBtn')) document.getElementById('spendNightBtn').onclick=()=>{ spendNight(c); closeModal(); };
-    if(document.getElementById('forceNightBtn')) document.getElementById('forceNightBtn').onclick=()=>{ forceNight(c); closeModal(); };
-    if(document.getElementById('makeConfidantBtn')) document.getElementById('makeConfidantBtn').onclick=()=>{ makeConfidant(c); closeModal(); };
-    if(document.getElementById('trainBtn')) document.getElementById('trainBtn').onclick=()=>{ showTrainDialog(c); closeModal(); };
-    if(document.getElementById('promoteBtn')) document.getElementById('promoteBtn').onclick=()=>{ if(promoteRank(c)){ updateUI(); } closeModal(); };
-    if(document.getElementById('breakUpBtn')) document.getElementById('breakUpBtn').onclick=()=>{ breakUpWithLover(c); closeModal(); };
+    document.getElementById('personActionBtn').onclick = ()=>{
+        let intent = document.getElementById('personActionInput').value;
+        if(intent){ closeModal(); performAction(`对${c.name}: ${intent}`); }
+    };
+    document.getElementById('personRandomBtn').onclick = ()=>{
+        closeModal(); performAction(`基于当前局势与${c.name}发生随机事件`);
+    };
+    document.getElementById('requestMoneyBtn').onclick = ()=>{ requestMoney(c); closeModal(); };
+    if(document.getElementById('spendNightBtn')) document.getElementById('spendNightBtn').onclick = ()=>{ spendNight(c); closeModal(); };
+    if(document.getElementById('forceNightBtn')) document.getElementById('forceNightBtn').onclick = ()=>{ forceNight(c); closeModal(); };
+    if(document.getElementById('makeConfidantBtn')) document.getElementById('makeConfidantBtn').onclick = ()=>{ makeConfidant(c); closeModal(); };
+    if(document.getElementById('trainBtn')) document.getElementById('trainBtn').onclick = ()=>{ showTrainDialog(c); closeModal(); };
+    if(document.getElementById('promoteBtn')) document.getElementById('promoteBtn').onclick = ()=>{ if(promoteRank(c)) updateUI(); closeModal(); };
+    if(document.getElementById('breakUpBtn')) document.getElementById('breakUpBtn').onclick = ()=>{ breakUpWithLover(c); closeModal(); };
 }
 function closeModal(){ document.getElementById('charModal').style.display='none'; }
-
 async function breakUpWithLover(c){
     if(!c.isLover) return;
     if(confirm(`确定要与 ${c.name} 分手吗？这将触发一段剧情，并可能影响双方关系。`)){
@@ -740,138 +774,147 @@ async function breakUpWithLover(c){
 }
 function requestMoney(c){
     let give=0;
-    if(c.affection>=80) give=Math.min(c.wealth, Math.floor(c.wealth*0.3));
-    else if(c.affection>=60) give=Math.min(c.wealth, Math.floor(c.wealth*0.1));
-    else if(c.affection>=40) give=Math.min(c.wealth, Math.floor(c.wealth*0.05));
+    if(c.affection>=80) give = Math.min(c.wealth, Math.floor(c.wealth*0.3));
+    else if(c.affection>=60) give = Math.min(c.wealth, Math.floor(c.wealth*0.1));
+    else if(c.affection>=40) give = Math.min(c.wealth, Math.floor(c.wealth*0.05));
     if(give>0){
-        c.wealth-=give; game.gold+=give;
-        alert(`${c.name} 赠予你 ${give} 金币。`);
+        c.wealth -= give;
+        game.gold += give;
+        showResultMessage(`${c.name} 赠予你 ${give} 金币。`, false);
         if(c.affection>70) c.affection+=2; else c.affection-=3;
     } else {
-        alert(`${c.name} 拒绝了你的索要。好感下降。`);
-        c.affection=Math.max(0,c.affection-5);
+        showResultMessage(`${c.name} 拒绝了你的索要。好感下降。`, true);
+        c.affection = Math.max(0,c.affection-5);
     }
     updateUI(); autoSave();
 }
 function spendNight(c){
     if(c.married && !c.polyamorous){
         if(confirm(`${c.name} 已婚，是否让他/她离婚再成为情人？`)){
-            c.married=false;
-            alert(`${c.name} 与前任离婚。`);
+            c.married = false;
+            showResultMessage(`${c.name} 与前任离婚。`, false);
         } else return;
     }
     if(c.relationship==="lover" || c.affection>=60){
-        if(c.relationship!=="lover"){ c.relationship="lover"; c.isLover=true; alert(`💕 你与 ${c.name} 成为情人！`); }
-        else alert(`💕 你与 ${c.name} 度过良宵。`);
-        c.affection=Math.min(100,c.affection+5);
-        game.king.suspicion=Math.min(100,game.king.suspicion+8);
-        alert(`国王怀疑值 +8，当前怀疑 ${game.king.suspicion}`);
+        if(c.relationship!=="lover"){ c.relationship="lover"; c.isLover=true; showResultMessage(`💕 你与 ${c.name} 成为情人！`, false); }
+        else showResultMessage(`💕 你与 ${c.name} 度过良宵。`, false);
+        c.affection = Math.min(100,c.affection+5);
+        game.king.suspicion = Math.min(100,game.king.suspicion+8);
+        showResultMessage(`国王怀疑值 +8，当前怀疑 ${game.king.suspicion}`, false);
     } else {
-        alert(`❌ ${c.name} 拒绝。好感下降。`);
-        c.affection=Math.max(0,c.affection-10);
-        game.prestige=Math.max(0,game.prestige-5);
-        game.king.suspicion=Math.min(100,game.king.suspicion+5);
-        alert(`声望 -5，国王怀疑 +5`);
+        showResultMessage(`❌ ${c.name} 拒绝。好感下降。`, true);
+        c.affection = Math.max(0,c.affection-10);
+        game.prestige = Math.max(0,game.prestige-5);
+        game.king.suspicion = Math.min(100,game.king.suspicion+5);
+        showResultMessage(`声望 -5，国王怀疑 +5`, true);
     }
     updateUI(); autoSave();
 }
 function forceNight(c){
-    if(c.relationship==="lover"){ alert(`情人之间不存在强行要求选项。`); return; }
-    alert(`⚠️ 你强行要求 ${c.name}，对方厌恶。`);
-    c.affection=Math.max(0,c.affection-15);
-    game.prestige=Math.max(0,game.prestige-8);
-    game.king.suspicion=Math.min(100,game.king.suspicion+10);
-    alert(`好感 -15，声望 -8，国王怀疑 +10`);
+    if(c.relationship==="lover"){ showResultMessage(`情人之间不存在强行要求选项。`, true); return; }
+    showResultMessage(`⚠️ 你强行要求 ${c.name}，对方厌恶。`, true);
+    c.affection = Math.max(0,c.affection-15);
+    game.prestige = Math.max(0,game.prestige-8);
+    game.king.suspicion = Math.min(100,game.king.suspicion+10);
+    showResultMessage(`好感 -15，声望 -8，国王怀疑 +10`, true);
     updateUI(); autoSave();
 }
 function makeConfidant(c){
     if(c.loyalty>=70){
-        c.isConfidant=true;
-        alert(`⭐ ${c.name} 成为心腹！`);
+        c.isConfidant = true;
+        showResultMessage(`⭐ ${c.name} 成为心腹！`, false);
     } else {
-        alert(`忠诚不足70，无法成为心腹`);
+        showResultMessage(`忠诚不足70，无法成为心腹`, true);
     }
     updateUI(); autoSave();
 }
 
 // ==================== 玩家行动与自主事件 ====================
 async function performAction(intent){
-    if(game.gameState!=="free" || game.inExile){ alert("当前状态无法行动"); return; }
+    if(game.gameState!=="free" || game.inExile){ showResultMessage("当前状态无法行动", true); return; }
     if(!intent.trim()) return;
-    let promptText = buildPrompt(intent, true, "", []);
-    let res = await generateEvent(promptText, false);
-    if(res){
-        advanceDay();
-        updateUI();
-        autoSave();
-        let div=document.getElementById('freeActionResult');
-        div.style.display='block';
-        div.innerHTML=`<div style="max-height:250px;overflow-y:auto;white-space:pre-wrap">${res.cleaned}</div><button class="action-sm" onclick="this.parentElement.style.display='none'">关闭</button>`;
-        alert(`行动已执行，剧情已记录。`);
+    // 显示加载中
+    let resultDiv = document.getElementById('freeActionResult');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `<div class="loading-text">⏳ AI思考中，请稍候...</div>`;
+    try{
+        let promptText = buildPrompt(intent, true, "", []);
+        let res = await generateEvent(promptText, false);
+        if(res){
+            advanceDay();
+            updateUI();
+            autoSave();
+            resultDiv.innerHTML = `<div style="white-space:pre-wrap; max-height:300px; overflow-y:auto;">${res.cleaned}</div><button class="action-sm" onclick="this.parentElement.style.display='none'">关闭</button>`;
+        } else {
+            resultDiv.innerHTML = `<div class="error-text">AI未返回有效结果，请重试。</div><button class="action-sm" onclick="this.parentElement.style.display='none'">关闭</button>`;
+        }
+    } catch(e){
+        console.error(e);
+        resultDiv.innerHTML = `<div class="error-text">执行失败: ${e.message}</div><button class="action-sm" onclick="this.parentElement.style.display='none'">关闭</button>`;
     }
 }
 function randomEvent(){ performAction("随机触发宫廷事件，根据当前剧情记忆和局势生成"); }
 async function sleep(){
     if(game.gameState==="prison"){ prisonAction(); return; }
     if(game.gameState==="ghost"){ ghostAction(); return; }
-    alert("😴 你沉沉睡去...");
+    showResultMessage("😴 你沉沉睡去...", false);
     advanceDay();
     await triggerAutonomousEventWithUI();
     moveCharactersRandomly();
-    let r=["做了一个模糊的梦","夜莺在窗外啼鸣","似乎听到走廊脚步声","睡得格外香甜","梦见北境雪原"][Math.floor(Math.random()*5)];
-    alert(`✨ ${r}`);
+    let r = ["做了一个模糊的梦","夜莺在窗外啼鸣","似乎听到走廊脚步声","睡得格外香甜","梦见北境雪原"][Math.floor(Math.random()*5)];
+    showResultMessage(`✨ ${r}`, false);
     updateUI(); autoSave();
 }
 function moveCharactersRandomly(){
     for(let c of characters){
         if(c.name==="腓特烈四世" || c.inPrison) continue;
         if(Math.random()<0.25){
-            let zoneNames=["皇宫","野外","王都"];
-            let newZone=zoneNames[Math.floor(Math.random()*zoneNames.length)];
-            let zoneObj=zones.find(z=>z.name===newZone);
-            let newLoc=zoneObj.children[Math.floor(Math.random()*zoneObj.children.length)].id;
-            c.zone=newZone; c.location=newLoc;
+            let zoneNames = ["皇宫","野外","王都"];
+            let newZone = zoneNames[Math.floor(Math.random()*zoneNames.length)];
+            let zoneObj = zones.find(z=>z.name===newZone);
+            let newLoc = zoneObj.children[Math.floor(Math.random()*zoneObj.children.length)].id;
+            c.zone = newZone; c.location = newLoc;
         }
     }
 }
 function prisonAction(){
-    let a=prompt("地牢中:\n1-越狱\n2-保释(300金)\n3-等待");
-    if(a==="1"){ let ch=0.3+game.intrigue/100; if(Math.random()<ch){ game.escapeAttempts=0; game.gameState="free"; game.currentZone="皇宫"; game.currentLocation="bedroom"; game.inExile=true; game.exileStartYear=game.year; game.exileStartMonth=game.month; alert("越狱成功，进入神殿修行"); } else { game.escapeAttempts++; alert(`越狱失败 ${game.escapeAttempts}/3`); } }
-    else if(a==="2" && game.gold>=300){ game.gold-=300; game.gameState="free"; game.currentZone="皇宫"; game.currentLocation="bedroom"; alert("保释出狱"); }
+    let a = prompt("地牢中:\n1-越狱\n2-保释(300金)\n3-等待");
+    if(a==="1"){ let ch = 0.3+game.intrigue/100; if(Math.random()<ch){ game.escapeAttempts=0; game.gameState="free"; game.currentZone="皇宫"; game.currentLocation="bedroom"; game.inExile=true; game.exileStartYear=game.year; game.exileStartMonth=game.month; showResultMessage("越狱成功，进入神殿修行", false); } else { game.escapeAttempts++; showResultMessage(`越狱失败 ${game.escapeAttempts}/3`, true); } }
+    else if(a==="2" && game.gold>=300){ game.gold-=300; game.gameState="free"; game.currentZone="皇宫"; game.currentLocation="bedroom"; showResultMessage("保释出狱", false); }
     updateUI(); renderLocations(); updateLocationDisplay();
 }
 function ghostAction(){
-    let a=prompt("幽灵:\n1-作祟宫廷\n2-托梦情人\n3-轮回");
-    if(a==="1"){ game.king.suspicion=Math.min(100,game.king.suspicion+10); alert("作祟宫廷，国王怀疑+10"); }
-    else if(a==="2"){ let l=characters.find(c=>c.isLover); if(l){ l.affection=Math.min(100,l.affection+10); alert(`托梦给${l.name}，好感+10`); } else alert("无情人"); }
-    else if(a==="3")resetGame();
+    let a = prompt("幽灵:\n1-作祟宫廷\n2-托梦情人\n3-轮回");
+    if(a==="1"){ game.king.suspicion = Math.min(100,game.king.suspicion+10); showResultMessage("作祟宫廷，国王怀疑+10", false); }
+    else if(a==="2"){ let l = characters.find(c=>c.isLover); if(l){ l.affection = Math.min(100,l.affection+10); showResultMessage(`托梦给${l.name}，好感+10`, false); } else showResultMessage("无情人", true); }
+    else if(a==="3") resetGame();
     updateUI();
 }
 
-// UI渲染
+// ==================== UI渲染 ====================
 function updateUI(){
-    document.getElementById('statPrestige').innerText=Math.floor(game.prestige);
-    document.getElementById('statIntrigue').innerText=Math.floor(game.intrigue);
-    document.getElementById('statGold').innerText=Math.floor(game.gold);
-    document.getElementById('kingAffection').innerText=game.king.affection;
-    document.getElementById('kingSuspicion').innerText=game.king.suspicion;
-    document.getElementById('statLovers').innerText=characters.filter(c=>c.relationship==="lover").length;
-    document.getElementById('statConfidants').innerText=characters.filter(c=>c.isConfidant).length;
-    document.getElementById('gameState').innerText=game.gameState==="free"?"自由":(game.inExile?"修行":"囚禁");
+    document.getElementById('statPrestige').innerText = Math.floor(game.prestige);
+    document.getElementById('statIntrigue').innerText = Math.floor(game.intrigue);
+    document.getElementById('statGold').innerText = Math.floor(game.gold);
+    document.getElementById('kingAffection').innerText = game.king.affection;
+    document.getElementById('kingSuspicion').innerText = game.king.suspicion;
+    document.getElementById('statLovers').innerText = characters.filter(c=>c.relationship==="lover").length;
+    document.getElementById('statConfidants').innerText = characters.filter(c=>c.isConfidant).length;
+    document.getElementById('gameState').innerText = game.gameState==="free"?"自由":(game.inExile?"修行":"囚禁");
     updateDateDisplay();
     renderLists(); renderStory();
 }
 function renderLists(){
-    let allDiv=document.getElementById('allCharactersList');
-    if(allDiv) allDiv.innerHTML=characters.map(c=>{
+    let allDiv = document.getElementById('allCharactersList');
+    if(allDiv) allDiv.innerHTML = characters.map(c=>{
         let rankDisplay = (c.name==="腓特烈四世") ? "国王" : (c.rankIdx>=0 ? rankTree[c.rankIdx].name : "无");
         return `<div class="person-card" onclick="showPersonModal(${c.id})"><b>${c.name}</b> (${c.type}) <span class="stat-badge">${rankDisplay}</span> ${c.relationship==="lover"?"💕情人":c.relationship==="enemy"?"⚠️仇敌":"🤝结识"}<br>❤️${c.affection} 📍${c.zone}·${c.location}</div>`;
     }).join('');
-    let loversDiv=document.getElementById('loversList');
-    if(loversDiv) loversDiv.innerHTML=characters.filter(c=>c.relationship==="lover").map(c=>`<div class="person-card" onclick="showPersonModal(${c.id})"><b>${c.name}</b> ❤️${c.affection}</div>`).join('')||"<div>暂无情人</div>";
-    let confDiv=document.getElementById('confidantsList');
+    let loversDiv = document.getElementById('loversList');
+    if(loversDiv) loversDiv.innerHTML = characters.filter(c=>c.relationship==="lover").map(c=>`<div class="person-card" onclick="showPersonModal(${c.id})"><b>${c.name}</b> ❤️${c.affection}</div>`).join('')||"<div>暂无情人</div>";
+    let confDiv = document.getElementById('confidantsList');
     if(confDiv){
-        confDiv.innerHTML=characters.filter(c=>c.isConfidant).map(c=>`
+        confDiv.innerHTML = characters.filter(c=>c.isConfidant).map(c=>`
             <div class="person-card">
                 <b>${c.name}</b> ⭐忠诚:${c.loyalty}<br>
                 <div>⚔️武艺:${c.combat} 📚智谋:${c.intelligence} 🤝外交:${c.diplomacy}</div>
@@ -884,10 +927,10 @@ function renderLists(){
     }
 }
 window.showTrainDialogById = (id) => { let c=characters.find(c=>c.id===id); if(c) showTrainDialog(c); };
-window.promoteById = (id) => { let c=characters.find(c=>c.id===id); if(c && promoteRank(c)){ updateUI(); } else alert("条件不足"); };
+window.promoteById = (id) => { let c=characters.find(c=>c.id===id); if(c && promoteRank(c)){ updateUI(); } else showResultMessage("条件不足", true); };
 function renderStory(){
-    let ctn=document.getElementById('storyContainer');
-    if(ctn) ctn.innerHTML=storyMemories.map(s=>`<div style="margin-bottom:0.5rem"><b>${s.time}</b><br>${s.summary}</div>`).join('');
+    let ctn = document.getElementById('storyContainer');
+    if(ctn) ctn.innerHTML = storyMemories.map(s=>`<div style="margin-bottom:0.5rem"><b>${s.time}</b><br>${s.summary}</div>`).join('');
 }
 function summarizeStory(){ alert(storyMemories.slice(0,10).map(s=>s.summary).join("\n")); }
 
@@ -904,7 +947,7 @@ function exportGame(){
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    alert("存档已导出为 JSON 文件");
+    showResultMessage("存档已导出为 JSON 文件", false);
 }
 function importGame(){
     let input = document.getElementById('importFileInput');
@@ -926,10 +969,10 @@ function importGame(){
                 renderLocations();
                 updateLocationDisplay();
                 updateLocationDetail();
-                alert("存档导入成功");
+                showResultMessage("存档导入成功", false);
                 autoSave();
             } catch(err){
-                alert("解析存档失败，文件可能损坏");
+                showResultMessage("解析存档失败，文件可能损坏", true);
             }
         };
         reader.readAsText(file);
@@ -943,8 +986,8 @@ function resetGame(){
         location.reload();
     }
 }
-function saveNote(){ privateNote=document.getElementById('privateNote').value; localStorage.setItem("queen_private_note",privateNote); alert("笔记已保存"); }
-function loadNote(){ let s=localStorage.getItem("queen_private_note"); if(s){ document.getElementById('privateNote').value=s; privateNote=s; } }
+function saveNote(){ privateNote = document.getElementById('privateNote').value; localStorage.setItem("queen_private_note",privateNote); showResultMessage("笔记已保存", false); }
+function loadNote(){ let s = localStorage.getItem("queen_private_note"); if(s){ document.getElementById('privateNote').value=s; privateNote=s; } }
 function autoSave(){
     let saveData = { game, storyMemories, characters, zones, nextId, privateNote };
     localStorage.setItem("queen_auto_save", JSON.stringify(saveData));
@@ -970,25 +1013,26 @@ function loadAutoSave(){
 }
 
 function initGame(){
-    let app=document.getElementById('appearanceInput').value.trim();
-    let idt=document.getElementById('identityInput').value.trim();
+    let app = document.getElementById('appearanceInput').value.trim();
+    let idt = document.getElementById('identityInput').value.trim();
     if(!app||!idt){ alert("请填写形象与背景"); return; }
-    game.appearance=app; game.identity=idt;
-    game.prestige=60; game.intrigue=45; game.gold=200; game.treasury=100000;
-    game.year=1; game.seasonIndex=0; game.month=1; game.day=1;
-    game.gameState="free"; game.currentZone="皇宫"; game.currentLocation="bedroom"; game.inExile=false; game.escapeAttempts=0; game.negativePrestigeStartYear=null;
-    game.king={affection:65,suspicion:30}; game.general={loyalty:70,ambition:28};
-    storyMemories=[]; privateNote="";
+    game.appearance = app; game.identity = idt;
+    game.prestige = 60; game.intrigue = 45; game.gold = 200; game.treasury = 100000;
+    game.year = 1; game.seasonIndex = 0; game.month = 1; game.day = 1;
+    game.gameState = "free"; game.currentZone = "皇宫"; game.currentLocation = "bedroom";
+    game.inExile = false; game.escapeAttempts = 0; game.negativePrestigeStartYear = null;
+    game.king = { affection:65, suspicion:30 }; game.general = { loyalty:70, ambition:28 };
+    storyMemories = []; privateNote = "";
     initCharacters();
     updateUI(); renderLocations(); updateLocationDisplay(); updateLocationDetail();
-    document.getElementById('creatorSection').style.display='none';
-    document.getElementById('gameMainPanel').style.display='block';
+    document.getElementById('creatorSection').style.display = 'none';
+    document.getElementById('gameMainPanel').style.display = 'block';
     loadNote(); autoSave();
     loadAutoSave();
 }
 function initTabs(){
     document.querySelectorAll('.tab-btn').forEach(btn=>{
-        btn.onclick=()=>{
+        btn.onclick = ()=>{
             document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
             btn.classList.add('active');
             document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active-pane'));
@@ -998,24 +1042,24 @@ function initTabs(){
 }
 
 // 绑定事件
-document.getElementById('confirmIdentityBtn').onclick=initGame;
-document.getElementById('submitFreeAction').onclick=()=>performAction(document.getElementById('freeActionInput').value);
-document.getElementById('randomEventBtn').onclick=()=>randomEvent();
-document.getElementById('sleepBtn').onclick=()=>sleep();
-document.getElementById('saveApiConfigBtn').onclick=saveApiConfig;
-document.getElementById('resetDefaultPromptBtn').onclick=resetDefaultPrompt;
-document.getElementById('exportSaveBtn').onclick=exportGame;
-document.getElementById('importSaveBtn').onclick=importGame;
-document.getElementById('resetBtn').onclick=resetGame;
-document.getElementById('summarizeStoryBtn').onclick=summarizeStory;
-document.getElementById('saveNoteBtn').onclick=saveNote;
-document.getElementById('dismissAllLoversBtn').onclick=()=>{ characters.forEach(c=>{ if(c.relationship==="lover"){ c.relationship="acquaintance"; c.isLover=false; } }); updateUI(); alert("已遣散所有情人"); };
+document.getElementById('confirmIdentityBtn').onclick = initGame;
+document.getElementById('submitFreeAction').onclick = ()=>performAction(document.getElementById('freeActionInput').value);
+document.getElementById('randomEventBtn').onclick = ()=>randomEvent();
+document.getElementById('sleepBtn').onclick = ()=>sleep();
+document.getElementById('saveApiConfigBtn').onclick = saveApiConfig;
+document.getElementById('resetDefaultPromptBtn').onclick = resetDefaultPrompt;
+document.getElementById('exportSaveBtn').onclick = exportGame;
+document.getElementById('importSaveBtn').onclick = importGame;
+document.getElementById('resetBtn').onclick = resetGame;
+document.getElementById('summarizeStoryBtn').onclick = summarizeStory;
+document.getElementById('saveNoteBtn').onclick = saveNote;
+document.getElementById('dismissAllLoversBtn').onclick = ()=>{ characters.forEach(c=>{ if(c.relationship==="lover"){ c.relationship="acquaintance"; c.isLover=false; } }); updateUI(); showResultMessage("已遣散所有情人", false); };
 
-document.getElementById('confirmAutonomousBtn').onclick=confirmAutonomous;
-document.getElementById('cancelAutonomousBtn').onclick=cancelAutonomous;
-document.getElementById('regenerateAutonomousBtn').onclick=regenerateAutonomous;
+document.getElementById('confirmAutonomousBtn').onclick = confirmAutonomous;
+document.getElementById('cancelAutonomousBtn').onclick = cancelAutonomous;
+document.getElementById('regenerateAutonomousBtn').onclick = regenerateAutonomous;
 
-window.onload=()=>{ loadApiConfig(); initTabs(); renderLocations(); };
+window.onload = ()=>{ loadApiConfig(); initTabs(); renderLocations(); };
 </script>
 </body>
 </html>
