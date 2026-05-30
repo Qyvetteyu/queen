@@ -128,7 +128,6 @@
         <div id="tabNote" class="tab-pane"><div class="glass-card" style="padding:12px;"><h4>📓 私人笔记</h4><textarea id="privateNote" rows="6"></textarea><button id="saveNoteBtn" class="action-sm" style="margin-top:8px;">保存笔记</button></div></div>
         <div id="tabStory" class="tab-pane"><div class="glass-card" style="padding:12px;"><h4>📖 剧情记忆</h4><div id="storyContainer" class="log-area" style="height:350px;"></div><button id="summarizeStoryBtn" class="action-sm" style="margin-top:8px;">总结摘要</button></div></div>
 
-        <!-- AI配置页面（增强版：测试连接 + 获取模型列表） -->
         <div id="tabAPI" class="tab-pane">
             <div class="glass-card" style="padding:12px;">
                 <h4 style="font-size:0.9rem;">🔌 AI接口配置</h4>
@@ -164,9 +163,10 @@
     <div class="modal-content" id="autonomousEventContent">
         <div id="autonomousEventText" style="white-space:pre-wrap; margin-bottom:12px;"></div>
         <div class="flex-btns">
-            <button id="confirmAutonomousBtn" class="action-sm">✅ 确定（记录剧情）</button>
-            <button id="cancelAutonomousBtn" class="action-sm">❌ 取消</button>
+            <button id="confirmAutonomousBtn" class="action-sm">✅ 确定</button>
+            <button id="continueAutonomousBtn" class="action-sm">▶️ 继续</button>
             <button id="regenerateAutonomousBtn" class="action-sm">🔄 重新生成</button>
+            <button id="cancelAutonomousBtn" class="action-sm">❌ 取消</button>
         </div>
     </div>
 </div>
@@ -308,7 +308,6 @@ function advanceDay(extraDays=1){
         }
     }
     updateDateDisplay();
-    // 入狱/处死逻辑修复：当声望长期低于-100且国王爱意低于70时，每年判定一次入狱
     if(game.gameState==="free" && !game.inExile && game.prestige < -100){
         if(game.negativePrestigeStartYear===null) game.negativePrestigeStartYear=game.year;
         if(game.year - game.negativePrestigeStartYear >= 1 && game.king.affection < 70){
@@ -435,7 +434,6 @@ function resetDefaultPrompt(){
     showResultMessage("已恢复默认模板（含数值限制）", false);
 }
 
-// 测试 API 连接
 async function testAPIConnection() {
     let resultDiv = document.getElementById('apiTestResult');
     resultDiv.style.display = 'block';
@@ -463,7 +461,6 @@ async function testAPIConnection() {
         });
         if (!response.ok) {
             let errorText = await response.text();
-            // 截断过长的错误信息
             throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);
         }
         let data = await response.json();
@@ -478,7 +475,6 @@ async function testAPIConnection() {
     }
 }
 
-// 获取可用模型列表并填充下拉框
 async function fetchModels() {
     let resultDiv = document.getElementById('apiTestResult');
     resultDiv.style.display = 'block';
@@ -489,7 +485,6 @@ async function fetchModels() {
         resultDiv.innerHTML = '<div class="error-text">❌ 未填写API端点</div>';
         return;
     }
-    // 稳健的模型列表端点构建
     let modelsUrl = url;
     if (modelsUrl.endsWith('/chat/completions')) {
         modelsUrl = modelsUrl.slice(0, -'/chat/completions'.length) + '/models';
@@ -627,7 +622,8 @@ async function fallbackAI(promptText){
     let novel = `模拟叙事: ${promptText.substring(0,100)}...\n【数值变动:声望+2,密谋+1】\n【剧情记忆:离线模拟事件】`;
     return parseAIResponse(novel);
 }
-async function generateEvent(promptText, isAutonomous=false){
+// 新增：仅生成但不应用变化的预览用函数
+async function generateEventPreview(promptText, isAutonomous=false){
     let res = null;
     try{
         res = await callAI(promptText);
@@ -636,6 +632,11 @@ async function generateEvent(promptText, isAutonomous=false){
         showResultMessage(`⚠️ AI调用失败: ${e.message}，已切换至离线模拟模式`, true);
         res = await fallbackAI(promptText);
     }
+    return res;
+}
+// 原generateEvent保留（但预览流程不再直接调用它，可由其他旧代码使用）
+async function generateEvent(promptText, isAutonomous=false){
+    let res = await generateEventPreview(promptText, isAutonomous);
     applyDelta(res.delta);
     for(let c of res.newChars) addNewCharacter(c);
     for(let l of res.newLocs) addNewLocation(l);
@@ -677,6 +678,164 @@ function applyRelationChange(name, newRel){
         else if(newRel==="enemy") ch.relationship="enemy";
         else if(newRel==="acquaintance"){ ch.relationship="acquaintance"; ch.isLover=false; }
     }
+}
+
+// ==================== 预览模式新增：暂存与快照 ====================
+let pendingActionResult = null;
+let pendingActionSnapshot = null;
+let lastUserIntent = null;
+let lastActionContext = null;  // 用于自主事件
+
+function saveSnapshot(){
+    pendingActionSnapshot = {
+        game: JSON.parse(JSON.stringify(game)),
+        characters: JSON.parse(JSON.stringify(characters)),
+        zones: JSON.parse(JSON.stringify(zones)),
+        storyMemories: JSON.parse(JSON.stringify(storyMemories)),
+        nextId: nextId
+    };
+}
+function restoreSnapshot(){
+    if(!pendingActionSnapshot) return;
+    game = pendingActionSnapshot.game;
+    characters = pendingActionSnapshot.characters;
+    zones = pendingActionSnapshot.zones;
+    storyMemories = pendingActionSnapshot.storyMemories;
+    nextId = pendingActionSnapshot.nextId;
+}
+function applyPendingResult(){
+    if(!pendingActionResult) return;
+    applyDelta(pendingActionResult.delta);
+    for(let c of pendingActionResult.newChars) addNewCharacter(c);
+    for(let l of pendingActionResult.newLocs) addNewLocation(l);
+    for(let rc of pendingActionResult.relationChanges) applyRelationChange(rc.name, rc.newRel);
+    if(pendingActionResult.memory){
+        storyMemories.unshift({
+            time: getFullDate(),
+            location: `${game.currentZone}·${game.currentLocation}`,
+            intent: lastActionContext ? "自主事件" : "自由行动",
+            content: pendingActionResult.cleaned,
+            summary: pendingActionResult.memory
+        });
+        if(storyMemories.length > 40) storyMemories.pop();
+    }
+}
+function clearPendingAction(){
+    pendingActionResult = null;
+    pendingActionSnapshot = null;
+    lastUserIntent = null;
+    lastActionContext = null;
+}
+
+// 预览界面展示函数
+function showActionResultPreview(cleanedText){
+    let resultDiv = document.getElementById('freeActionResult');
+    resultDiv.innerHTML = `
+        <div style="white-space:pre-wrap; max-height:300px; overflow-y:auto; margin-bottom:12px;">${cleanedText}</div>
+        <div class="flex-btns">
+            <button id="actionConfirmBtn" class="action-sm">✅ 确认</button>
+            <button id="actionContinueBtn" class="action-sm">▶️ 继续</button>
+            <button id="actionRegenerateBtn" class="action-sm">🔄 重新生成</button>
+            <button id="actionCancelBtn" class="action-sm">❌ 取消</button>
+        </div>
+    `;
+    resultDiv.style.display = 'block';
+    document.getElementById('actionConfirmBtn').onclick = confirmAction;
+    document.getElementById('actionContinueBtn').onclick = continueAction;
+    document.getElementById('actionRegenerateBtn').onclick = regenerateAction;
+    document.getElementById('actionCancelBtn').onclick = cancelAction;
+}
+
+// 确认：应用结果，推进时间
+function confirmAction(){
+    if(!pendingActionResult) return;
+    applyPendingResult();
+    advanceDay();
+    moveCharactersRandomly();
+    updateUI();
+    autoSave();
+    clearPendingAction();
+    document.getElementById('freeActionResult').style.display = 'none';
+}
+
+// 继续：先应用当前结果，再自动生成后续
+async function continueAction(){
+    if(!pendingActionResult) return;
+    applyPendingResult();
+    advanceDay();
+    moveCharactersRandomly();
+    updateUI();
+    autoSave();
+
+    // 根据上次意图生成继续剧情
+    let continueIntent = `剧情继续发展：${lastUserIntent}`;
+    if(lastActionContext){
+        continueIntent = `基于上述事件，继续发生后续：${lastActionContext}`;
+    }
+    // 为继续操作保存新快照
+    saveSnapshot();
+    lastUserIntent = continueIntent;
+
+    let resultDiv = document.getElementById('freeActionResult');
+    resultDiv.innerHTML = `<div class="loading-text">⏳ 正在生成后续剧情...</div>`;
+    try{
+        let promptText;
+        if(lastActionContext){
+            promptText = buildPrompt("", false, lastActionContext, []);
+        } else {
+            promptText = buildPrompt(continueIntent, true, "", []);
+        }
+        let res = await generateEventPreview(promptText, false);
+        if(res){
+            pendingActionResult = res;
+            showActionResultPreview(res.cleaned);
+        } else {
+            resultDiv.innerHTML = `<div class="error-text">AI未返回有效结果。</div><button class="action-sm" onclick="this.parentElement.style.display='none'">关闭</button>`;
+            clearPendingAction();
+        }
+    } catch(e){
+        resultDiv.innerHTML = `<div class="error-text">生成失败: ${e.message}</div><button class="action-sm" onclick="this.parentElement.style.display='none'">关闭</button>`;
+        clearPendingAction();
+    }
+}
+
+// 重新生成：回滚快照，用相同意图重新请求
+async function regenerateAction(){
+    if(!pendingActionResult) return;
+    restoreSnapshot();
+    let resultDiv = document.getElementById('freeActionResult');
+    resultDiv.innerHTML = `<div class="loading-text">⏳ 重新生成中...</div>`;
+    try{
+        let promptText;
+        if(lastActionContext){
+            promptText = buildPrompt("", false, lastActionContext, []);
+        } else {
+            promptText = buildPrompt(lastUserIntent, true, "", []);
+        }
+        let res = await generateEventPreview(promptText, false);
+        if(res){
+            pendingActionResult = res;
+            showActionResultPreview(res.cleaned);
+        } else {
+            resultDiv.innerHTML = `<div class="error-text">AI未返回有效结果。</div><button class="action-sm" onclick="this.parentElement.style.display='none'">关闭</button>`;
+            clearPendingAction();
+        }
+    } catch(e){
+        resultDiv.innerHTML = `<div class="error-text">重新生成失败: ${e.message}</div><button class="action-sm" onclick="this.parentElement.style.display='none'">关闭</button>`;
+        clearPendingAction();
+    }
+}
+
+// 取消：恢复快照，丢弃预览
+function cancelAction(){
+    if(!pendingActionResult) return;
+    restoreSnapshot();
+    clearPendingAction();
+    document.getElementById('freeActionResult').style.display = 'none';
+    updateUI();
+    renderLocations();
+    updateLocationDisplay();
+    updateLocationDetail();
 }
 
 // ==================== 晋升与培养 ====================
@@ -732,8 +891,7 @@ function showResultMessage(msg, isError = false){
     }
 }
 
-// ==================== 自主事件（保留弹窗） ====================
-let pendingAutonomousResult = null;
+// ==================== 自主事件（预览模式） ====================
 async function triggerAutonomousEventWithUI(){
     if(game.gameState!=="free" || game.inExile) return;
     let lovers = characters.filter(c=>c.relationship==="lover" && !c.inPrison);
@@ -761,10 +919,14 @@ async function triggerAutonomousEventWithUI(){
             context=`${involved[0].name} 独自在${involved[0].zone}徘徊，似乎心事重重。`;
         } else return;
     }
+    // 保存快照与上下文
+    saveSnapshot();
+    lastActionContext = context;
+    lastUserIntent = ""; // 自主事件没有具体意图文本
     let promptText = buildPrompt("", false, context, involved);
-    let res = await generateEvent(promptText, true);
+    let res = await generateEventPreview(promptText, true);
     if(res){
-        pendingAutonomousResult = res;
+        pendingActionResult = res;
         showAutonomousModal(res.cleaned);
     }
 }
@@ -774,55 +936,60 @@ function showAutonomousModal(text){
     textDiv.innerText = text;
     modal.style.display = 'flex';
 }
+// 自主事件的四个操作
 function confirmAutonomous(){
-    if(pendingAutonomousResult){
-        advanceDay();
-        moveCharactersRandomly();
-        updateUI();
-        autoSave();
-        showResultMessage(`自主事件已记录：${pendingAutonomousResult.memory}`, false);
-    }
-    pendingAutonomousResult = null;
+    if(!pendingActionResult) return;
+    applyPendingResult();
+    advanceDay();
+    moveCharactersRandomly();
+    updateUI();
+    autoSave();
+    showResultMessage(`自主事件已记录：${pendingActionResult.memory}`, false);
+    clearPendingAction();
     document.getElementById('autonomousEventModal').style.display = 'none';
 }
 function cancelAutonomous(){
-    pendingAutonomousResult = null;
+    restoreSnapshot();
+    clearPendingAction();
     document.getElementById('autonomousEventModal').style.display = 'none';
     showResultMessage("已取消，该事件未记录。", false);
 }
+async function continueAutonomous(){
+    if(!pendingActionResult) return;
+    applyPendingResult();
+    advanceDay();
+    moveCharactersRandomly();
+    updateUI();
+    autoSave();
+
+    // 基于当前上下文继续
+    saveSnapshot();
+    // lastActionContext 保持不变
+    let continueContext = `基于上述事件，继续发生后续：${lastActionContext}`;
+    let promptText = buildPrompt("", false, continueContext, []);
+    let res = await generateEventPreview(promptText, true);
+    if(res){
+        pendingActionResult = res;
+        document.getElementById('autonomousEventText').innerText = res.cleaned;
+    } else {
+        showResultMessage("生成后续剧情失败，请重试。", true);
+        clearPendingAction();
+        document.getElementById('autonomousEventModal').style.display = 'none';
+    }
+}
 async function regenerateAutonomous(){
-    if(pendingAutonomousResult){
-        let lovers = characters.filter(c=>c.relationship==="lover" && !c.inPrison);
-        let confidants = characters.filter(c=>c.isConfidant && !c.inPrison);
-        let type=0;
-        if(lovers.length>=2 && Math.random()<0.3) type=1;
-        else if(confidants.length>=1 && Math.random()<0.3) type=2;
-        let involved=[], context="";
-        if(type===1 && lovers.length>=2){
-            let idx1=Math.floor(Math.random()*lovers.length), idx2; do{ idx2=Math.floor(Math.random()*lovers.length); }while(idx1===idx2);
-            involved=[lovers[idx1], lovers[idx2]];
-            context=`两位情人 ${involved[0].name} 和 ${involved[1].name} 因皇后产生了嫉妒与争执。`;
-        } else if(type===2 && confidants.length>=1){
-            let c = confidants[Math.floor(Math.random()*confidants.length)];
-            involved=[c];
-            context=`心腹 ${c.name} 正在秘密策划一件有利于皇后的大事。`;
-        } else {
-            let others = characters.filter(c=>c.name!=="腓特烈四世" && !c.inPrison && c.relationship!=="lover");
-            if(others.length>=2){
-                let idx1=Math.floor(Math.random()*others.length), idx2; do{ idx2=Math.floor(Math.random()*others.length); }while(idx1===idx2);
-                involved=[others[idx1], others[idx2]];
-                context=`${involved[0].name} 与 ${involved[1].name} 在宫廷中发生了一场争执。`;
-            } else if(others.length===1){
-                involved=[others[0]];
-                context=`${involved[0].name} 独自在${involved[0].zone}徘徊，似乎心事重重。`;
-            } else return;
-        }
-        let promptText = buildPrompt("", false, context, involved);
-        let res = await generateEvent(promptText, true);
-        if(res){
-            pendingAutonomousResult = res;
-            document.getElementById('autonomousEventText').innerText = res.cleaned;
-        }
+    if(!pendingActionResult) return;
+    restoreSnapshot();
+    // 用原始上下文重新生成
+    let promptText = buildPrompt("", false, lastActionContext, []);
+    let res = await generateEventPreview(promptText, true);
+    if(res){
+        pendingActionResult = res;
+        document.getElementById('autonomousEventText').innerText = res.cleaned;
+    } else {
+        showResultMessage("重新生成失败，请重试。", true);
+        clearPendingAction();
+        document.getElementById('autonomousEventModal').style.display = 'none';
     }
 }
 
@@ -942,27 +1109,30 @@ function makeConfidant(c){
     updateUI(); autoSave();
 }
 
-// ==================== 玩家行动与自主事件 ====================
+// ==================== 玩家行动（预览版） ====================
 async function performAction(intent){
     if(game.gameState!=="free" || game.inExile){ showResultMessage("当前状态无法行动", true); return; }
     if(!intent.trim()) return;
+    saveSnapshot();
+    lastUserIntent = intent;
+    lastActionContext = null;
     let resultDiv = document.getElementById('freeActionResult');
     resultDiv.style.display = 'block';
     resultDiv.innerHTML = `<div class="loading-text">⏳ AI思考中，请稍候...</div>`;
     try{
         let promptText = buildPrompt(intent, true, "", []);
-        let res = await generateEvent(promptText, false);
+        let res = await generateEventPreview(promptText, false);
         if(res){
-            advanceDay();
-            updateUI();
-            autoSave();
-            resultDiv.innerHTML = `<div style="white-space:pre-wrap; max-height:300px; overflow-y:auto;">${res.cleaned}</div><button class="action-sm" onclick="this.parentElement.style.display='none'">关闭</button>`;
+            pendingActionResult = res;
+            showActionResultPreview(res.cleaned);
         } else {
             resultDiv.innerHTML = `<div class="error-text">AI未返回有效结果，请重试。</div><button class="action-sm" onclick="this.parentElement.style.display='none'">关闭</button>`;
+            clearPendingAction();
         }
     } catch(e){
         console.error(e);
         resultDiv.innerHTML = `<div class="error-text">执行失败: ${e.message}</div><button class="action-sm" onclick="this.parentElement.style.display='none'">关闭</button>`;
+        clearPendingAction();
     }
 }
 function randomEvent(){ performAction("随机触发宫廷事件，根据当前剧情记忆和局势生成"); }
@@ -1012,7 +1182,6 @@ function updateUI(){
     document.getElementById('kingSuspicion').innerText = game.king.suspicion;
     document.getElementById('statLovers').innerText = characters.filter(c=>c.relationship==="lover").length;
     document.getElementById('statConfidants').innerText = characters.filter(c=>c.isConfidant).length;
-    // 修复状态显示逻辑
     let stateText = game.inExile ? "修行" : (game.gameState === "free" ? "自由" : (game.gameState === "prison" ? "囚禁" : "幽灵"));
     document.getElementById('gameState').innerText = stateText;
     updateDateDisplay();
@@ -1141,7 +1310,6 @@ function initGame(){
     document.getElementById('gameMainPanel').style.display = 'block';
     loadNote();
     autoSave();
-    // 不要在此调用 loadAutoSave，否则会覆盖初始化值
 }
 function initTabs(){
     document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -1173,14 +1341,13 @@ document.getElementById('dismissAllLoversBtn').onclick = ()=>{ characters.forEac
 document.getElementById('confirmAutonomousBtn').onclick = confirmAutonomous;
 document.getElementById('cancelAutonomousBtn').onclick = cancelAutonomous;
 document.getElementById('regenerateAutonomousBtn').onclick = regenerateAutonomous;
+document.getElementById('continueAutonomousBtn').onclick = continueAutonomous;
 
 window.onload = ()=>{
     loadApiConfig();
     initTabs();
     renderLocations();
-    // 尝试恢复上次自动保存的进度
     if(loadAutoSave()){
-        // 恢复成功，直接进入游戏主面板
         document.getElementById('creatorSection').style.display = 'none';
         document.getElementById('gameMainPanel').style.display = 'block';
         updateUI();
@@ -1190,7 +1357,6 @@ window.onload = ()=>{
         loadNote();
         showResultMessage("已恢复上次游戏进度", false);
     } else {
-        // 没有存档，显示创建身份界面
         document.getElementById('creatorSection').style.display = 'block';
         document.getElementById('gameMainPanel').style.display = 'none';
     }
