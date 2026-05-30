@@ -199,7 +199,8 @@ const PLAYER_ACTION_PROMPT = `你是史诗宫廷小说的叙事者，文风华�
 4. 若出现新地点，使用【新地点:名称,父级区域,描述】。
 5. 叙事末尾必须添加【数值变动:声望±X,密谋±X,金币±X,国王爱意±X,国王怀疑±X】（每次变动绝对值不超过5）。
 6. 添加【剧情记忆:一句话摘要】。
-7. 若人物关系发生变化，添加【关系变化:角色名,新关系】。`;
+7. 若人物关系发生变化，添加【关系变化:角色名,新关系】。
+8. 若任一角色的好感、忠诚等属性发生变化，必须添加【角色数值:角色名,好感±X,忠诚±Y】（可只写变化的属性）。若无变化则省略。`;
 
 const AUTONOMOUS_EVENT_PROMPT = `你是史诗宫廷小说的叙事者，文风细腻。根据以下设定生成300-600字的叙事，聚焦角色间的自主互动。
 
@@ -214,7 +215,8 @@ const AUTONOMOUS_EVENT_PROMPT = `你是史诗宫廷小说的叙事者，文风�
 2. 严格遵循特殊人物背景设定。
 3. 末尾必须添加【数值变动:声望±X,密谋±X,金币±X,国王爱意±X,国王怀疑±X】（每次变动绝对值不超过5）。
 4. 【剧情记忆:一句话摘要】
-5. 【关系变化:角色名,新关系】（如有）`;
+5. 【关系变化:角色名,新关系】（如有）
+6. 若任一角色的好感、忠诚等属性发生变化，必须添加【角色数值:角色名,好感±X,忠诚±Y】（可只写变化的属性）。若无变化则省略。`;
 
 // ==================== 游戏核心状态 ====================
 let game = {
@@ -525,7 +527,7 @@ async function fetchModels() {
 function buildPrompt(intent, isPlayerAction=true, eventContext="", involvedChars=[]){
     let tpl = isPlayerAction ? apiConfig.promptTemplate : AUTONOMOUS_EVENT_PROMPT;
     let mem=storyMemories.slice(-8).map((m,i)=>`[${i+1}] ${m.summary}`).join("\n")||"无";
-    let rel=characters.filter(c=>c.name!="腓特烈四世").map(c=>`${c.name}:好感${c.affection},关系${c.relationship}`).join("\n");
+    let rel=characters.filter(c=>c.name!=="腓特烈四世").map(c=>`${c.name}:好感${c.affection},忠诚${c.loyalty},关系${c.relationship}`).join("\n");
     let specialBGs = getSpecialBackgroundsString();
     let base = {
         appearance: game.appearance||"皇后",
@@ -551,7 +553,7 @@ function buildPrompt(intent, isPlayerAction=true, eventContext="", involvedChars
     return result;
 }
 function parseAIResponse(novel){
-    let delta={prestige:0,intrigue:0,gold:0,kingAffection:0,kingSuspicion:0},newChars=[],newLocs=[],mem="",relationChanges=[];
+    let delta={prestige:0,intrigue:0,gold:0,kingAffection:0,kingSuspicion:0},newChars=[],newLocs=[],mem="",relationChanges=[], charDeltas=[];
     let vm=novel.match(/【数值变动:([^】]+)】/);
     if(vm){
         let parts=vm[1].match(/(声望|密谋|金币|国王爱意|国王怀疑)([+\-]\d+)/g);
@@ -588,7 +590,28 @@ function parseAIResponse(novel){
     let lm=novel.match(/【新地点:([^】]+)】/g);if(lm)lm.forEach(l=>{let parts=l.replace(/【新地点:|】/g,'').split(',');if(parts.length>=3)newLocs.push({zone:parts[1].trim(),id:parts[0].trim().toLowerCase().replace(/\s/g,''),name:parts[0].trim(),desc:parts[2]?.trim()||"新地点"});});
     let mm=novel.match(/【剧情记忆:([^】]+)】/);if(mm)mem=mm[1].trim();
     let rcm=novel.match(/【关系变化:([^】]+)】/g);if(rcm)rcm.forEach(rc=>{let parts=rc.replace(/【关系变化:|】/g,'').split(',');if(parts.length>=2)relationChanges.push({name:parts[0].trim(),newRel:parts[1].trim()});});
-    return {delta,newChars,newLocs,memory:mem,cleaned:novel,relationChanges};
+    // 新增：解析角色数值变动
+    let cdm = novel.match(/【角色数值:([^】]+)】/g);
+    if(cdm){
+        cdm.forEach(cd => {
+            let content = cd.replace(/【角色数值:|】/g, '').trim();
+            let parts = content.split(',').map(p => p.trim());
+            if(parts.length >= 2){
+                let name = parts[0];
+                let obj = {};
+                for(let i=1; i<parts.length; i++){
+                    let match = parts[i].match(/^(好感|忠诚)([+\-]\d+)$/);
+                    if(match){
+                        obj[match[1]] = parseInt(match[2]);
+                    }
+                }
+                if(Object.keys(obj).length > 0){
+                    charDeltas.push({ name, ...obj });
+                }
+            }
+        });
+    }
+    return {delta,newChars,newLocs,memory:mem,cleaned:novel,relationChanges, charDeltas};
 }
 async function callAI(promptText){
     if(!apiConfig.url) throw new Error("未配置API地址");
@@ -622,7 +645,6 @@ async function fallbackAI(promptText){
     let novel = `模拟叙事: ${promptText.substring(0,100)}...\n【数值变动:声望+2,密谋+1】\n【剧情记忆:离线模拟事件】`;
     return parseAIResponse(novel);
 }
-// 新增：仅生成但不应用变化的预览用函数
 async function generateEventPreview(promptText, isAutonomous=false){
     let res = null;
     try{
@@ -634,13 +656,13 @@ async function generateEventPreview(promptText, isAutonomous=false){
     }
     return res;
 }
-// 原generateEvent保留（但预览流程不再直接调用它，可由其他旧代码使用）
 async function generateEvent(promptText, isAutonomous=false){
     let res = await generateEventPreview(promptText, isAutonomous);
     applyDelta(res.delta);
     for(let c of res.newChars) addNewCharacter(c);
     for(let l of res.newLocs) addNewLocation(l);
     for(let rc of res.relationChanges) applyRelationChange(rc.name, rc.newRel);
+    applyCharDeltas(res.charDeltas);
     if(res.memory) storyMemories.unshift({time:getFullDate(),location:`${game.currentZone}·${game.currentLocation}`,intent:isAutonomous?"自主事件":"自由行动",content:res.cleaned,summary:res.memory});
     if(storyMemories.length>40) storyMemories.pop();
     return res;
@@ -674,17 +696,42 @@ function addNewLocation(l){
 function applyRelationChange(name, newRel){
     let ch = characters.find(c=>c.name===name);
     if(ch){
-        if(newRel==="lover"){ ch.relationship="lover"; ch.isLover=true; }
-        else if(newRel==="enemy") ch.relationship="enemy";
-        else if(newRel==="acquaintance"){ ch.relationship="acquaintance"; ch.isLover=false; }
+        let oldRel = ch.relationship;
+        ch.relationship = newRel;
+        if(newRel === "lover"){
+            ch.isLover = true;
+            // 自动联动：如果AI没给角色数值，默认好感+10
+            if(!pendingActionResult?.charDeltas?.some(cd=>cd.name===name)){
+                ch.affection = Math.min(100, ch.affection + 10);
+            }
+        } else if(newRel === "enemy"){
+            ch.isLover = false;
+            // 自动联动：默认好感-20
+            if(!pendingActionResult?.charDeltas?.some(cd=>cd.name===name)){
+                ch.affection = Math.max(0, ch.affection - 20);
+            }
+        } else if(newRel === "acquaintance"){
+            ch.isLover = false;
+        }
     }
+}
+// 新增：应用角色数值变动
+function applyCharDeltas(charDeltas){
+    if(!charDeltas) return;
+    charDeltas.forEach(cd => {
+        let c = characters.find(c=>c.name === cd.name);
+        if(c){
+            if(cd.好感 !== undefined) c.affection = Math.min(100, Math.max(0, c.affection + cd.好感));
+            if(cd.忠诚 !== undefined) c.loyalty = Math.min(100, Math.max(0, c.loyalty + cd.忠诚));
+        }
+    });
 }
 
 // ==================== 预览模式新增：暂存与快照 ====================
 let pendingActionResult = null;
 let pendingActionSnapshot = null;
 let lastUserIntent = null;
-let lastActionContext = null;  // 用于自主事件
+let lastActionContext = null;
 
 function saveSnapshot(){
     pendingActionSnapshot = {
@@ -706,6 +753,7 @@ function restoreSnapshot(){
 function applyPendingResult(){
     if(!pendingActionResult) return;
     applyDelta(pendingActionResult.delta);
+    applyCharDeltas(pendingActionResult.charDeltas);
     for(let c of pendingActionResult.newChars) addNewCharacter(c);
     for(let l of pendingActionResult.newLocs) addNewLocation(l);
     for(let rc of pendingActionResult.relationChanges) applyRelationChange(rc.name, rc.newRel);
@@ -727,7 +775,6 @@ function clearPendingAction(){
     lastActionContext = null;
 }
 
-// 预览界面展示函数
 function showActionResultPreview(cleanedText){
     let resultDiv = document.getElementById('freeActionResult');
     resultDiv.innerHTML = `
@@ -746,7 +793,6 @@ function showActionResultPreview(cleanedText){
     document.getElementById('actionCancelBtn').onclick = cancelAction;
 }
 
-// 确认：应用结果，推进时间
 function confirmAction(){
     if(!pendingActionResult) return;
     applyPendingResult();
@@ -758,7 +804,6 @@ function confirmAction(){
     document.getElementById('freeActionResult').style.display = 'none';
 }
 
-// 继续：先应用当前结果，再自动生成后续
 async function continueAction(){
     if(!pendingActionResult) return;
     applyPendingResult();
@@ -767,12 +812,10 @@ async function continueAction(){
     updateUI();
     autoSave();
 
-    // 根据上次意图生成继续剧情
     let continueIntent = `剧情继续发展：${lastUserIntent}`;
     if(lastActionContext){
         continueIntent = `基于上述事件，继续发生后续：${lastActionContext}`;
     }
-    // 为继续操作保存新快照
     saveSnapshot();
     lastUserIntent = continueIntent;
 
@@ -799,7 +842,6 @@ async function continueAction(){
     }
 }
 
-// 重新生成：回滚快照，用相同意图重新请求
 async function regenerateAction(){
     if(!pendingActionResult) return;
     restoreSnapshot();
@@ -826,7 +868,6 @@ async function regenerateAction(){
     }
 }
 
-// 取消：恢复快照，丢弃预览
 function cancelAction(){
     if(!pendingActionResult) return;
     restoreSnapshot();
@@ -919,10 +960,9 @@ async function triggerAutonomousEventWithUI(){
             context=`${involved[0].name} 独自在${involved[0].zone}徘徊，似乎心事重重。`;
         } else return;
     }
-    // 保存快照与上下文
     saveSnapshot();
     lastActionContext = context;
-    lastUserIntent = ""; // 自主事件没有具体意图文本
+    lastUserIntent = "";
     let promptText = buildPrompt("", false, context, involved);
     let res = await generateEventPreview(promptText, true);
     if(res){
@@ -936,7 +976,6 @@ function showAutonomousModal(text){
     textDiv.innerText = text;
     modal.style.display = 'flex';
 }
-// 自主事件的四个操作
 function confirmAutonomous(){
     if(!pendingActionResult) return;
     applyPendingResult();
@@ -962,9 +1001,7 @@ async function continueAutonomous(){
     updateUI();
     autoSave();
 
-    // 基于当前上下文继续
     saveSnapshot();
-    // lastActionContext 保持不变
     let continueContext = `基于上述事件，继续发生后续：${lastActionContext}`;
     let promptText = buildPrompt("", false, continueContext, []);
     let res = await generateEventPreview(promptText, true);
@@ -980,7 +1017,6 @@ async function continueAutonomous(){
 async function regenerateAutonomous(){
     if(!pendingActionResult) return;
     restoreSnapshot();
-    // 用原始上下文重新生成
     let promptText = buildPrompt("", false, lastActionContext, []);
     let res = await generateEventPreview(promptText, true);
     if(res){
