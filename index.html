@@ -181,11 +181,11 @@ const SPECIAL_CHARACTER_BACKGROUNDS = {
     "伊莎贝拉": "修女，真实身份是被流放的贵族之女，因家族变故躲入教堂避祸。她表面虔诚禁欲，实则对宫廷爱恨交织。"
 };
 
-// ==================== 提示词模板 ====================
-const PLAYER_ACTION_PROMPT = `你是史诗宫廷小说的叙事者，文风华丽细腻，擅长心理描写与权谋博弈。根据以下设定生成至少1000字的叙事，严格遵循人物设定，不得OOC。
+// ==================== 增强束缚力的提示词模板 ====================
+const PLAYER_ACTION_PROMPT = `你是史诗宫廷小说的叙事者，文风华丽细腻，擅长心理描写与权谋博弈。你必须严格遵循以下指令，不得遗漏任何标记。
 
 【皇后】形象: {{appearance}} 背景: {{identity}} 性格: 冷艳、隐忍、狡黠、深藏野心。
-【特殊人物背景】（请严格遵循）{{specialBackgrounds}}
+【特殊人物背景】（请严格遵循，不可OOC）{{specialBackgrounds}}
 【当前状态】声望: {{prestige}} 密谋: {{intrigue}} 金币: {{gold}} 国王爱意: {{kingAffection}} 国王怀疑: {{kingSuspicion}}
 【时间地点】时间: {{fullDate}} 地点: {{location}}
 【近期剧情记忆】{{storyMemories}}
@@ -193,16 +193,17 @@ const PLAYER_ACTION_PROMPT = `你是史诗宫廷小说的叙事者，文风华�
 【皇后的行动】「{{intent}}」
 
 【创作要求】
-1. 至少1000字，细致描写环境、心理活动、人物微表情和权力暗流。
-2. 严格遵循特殊人物背景设定，不可扭曲其性格与经历。
-3. 若出现新角色，必须使用【新角色:名字,身份,性格,区域,具体地点,多元爱情】格式。
-4. 若出现新地点，使用【新地点:名称,父级区域,描述】。
-5. 叙事末尾必须添加【数值变动:声望±X,密谋±X,金币±X,国王爱意±X,国王怀疑±X】（每次变动绝对值不超过5）。
-6. 添加【剧情记忆:一句话摘要】。
-7. 若人物关系发生变化，添加【关系变化:角色名,新关系】。
-8. 若任一角色的好感、忠诚等属性发生变化，必须添加【角色数值:角色名,好感±X,忠诚±Y】（可只写变化的属性）。若无变化则省略。`;
+1. 生成至少1000字的叙事，细致描写环境、心理、微表情和权力暗流。
+2. 严格遵循特殊人物背景，不可扭曲其性格与经历。
+3. 若出现新角色，必须在文末添加标记：【新角色:名字,身份,性格,区域,具体地点,是否允许多元爱情(是/否)】。例如：【新角色:艾莉诺,女官,温柔,皇宫,花园,否】
+4. 若出现新地点，必须在文末添加标记：【新地点:地点名,所属区域,描述】。例如：【新地点:玫瑰回廊,皇宫,一条布满荆棘与玫瑰的隐秘长廊】
+5. 必须在文末添加【数值变动:声望±X,密谋±X,金币±X,国王爱意±X,国王怀疑±X】（每次变动绝对值≤5）。
+6. 必须添加【剧情记忆:一句话摘要】。
+7. 若人物关系发生变化，添加【关系变化:角色名,新关系】（新关系必须为lover/enemy/acquaintance之一）。
+8. 若任一角色的好感或忠诚等属性发生变化，必须添加【角色数值:角色名,好感±X,忠诚±Y】（可只写变化的属性）。若无变化则省略。例如：【角色数值:洛伦佐,好感+5】。
+9. 以上所有标记必须出现在叙事末尾，且严格按照格式，不得缺少方括号和中文名称。`;
 
-const AUTONOMOUS_EVENT_PROMPT = `你是史诗宫廷小说的叙事者，文风细腻。根据以下设定生成300-600字的叙事，聚焦角色间的自主互动。
+const AUTONOMOUS_EVENT_PROMPT = `你是史诗宫廷小说的叙事者，文风细腻。根据以下设定生成300-600字的叙事，聚焦角色间的自主互动。你必须严格遵循以下指令。
 
 【背景】{{eventContext}}
 【涉及人物】{{characters}}
@@ -211,12 +212,14 @@ const AUTONOMOUS_EVENT_PROMPT = `你是史诗宫廷小说的叙事者，文风�
 【时间】{{fullDate}}
 
 【要求】
-1. 生成角色间的自主互动事件，展现人物性格和关系冲突。
+1. 生成叙事，展现角色性格和关系冲突。
 2. 严格遵循特殊人物背景设定。
-3. 末尾必须添加【数值变动:声望±X,密谋±X,金币±X,国王爱意±X,国王怀疑±X】（每次变动绝对值不超过5）。
-4. 【剧情记忆:一句话摘要】
-5. 【关系变化:角色名,新关系】（如有）
-6. 若任一角色的好感、忠诚等属性发生变化，必须添加【角色数值:角色名,好感±X,忠诚±Y】（可只写变化的属性）。若无变化则省略。`;
+3. 若出现新地点，必须在文末添加标记：【新地点:地点名,所属区域,描述】。
+4. 必须在文末添加【数值变动:声望±X,密谋±X,金币±X,国王爱意±X,国王怀疑±X】（每次变动绝对值≤5）。
+5. 必须添加【剧情记忆:一句话摘要】。
+6. 若人物关系发生变化，添加【关系变化:角色名,新关系】（新关系必须为lover/enemy/acquaintance之一）。
+7. 若任一角色的好感或忠诚发生变化，必须添加【角色数值:角色名,好感±X,忠诚±Y】。若无变化则省略。例如：【角色数值:雷奥纳多,好感-3】。
+8. 以上所有标记必须出现在叙事末尾，严格按照格式书写。`;
 
 // ==================== 游戏核心状态 ====================
 let game = {
@@ -590,7 +593,6 @@ function parseAIResponse(novel){
     let lm=novel.match(/【新地点:([^】]+)】/g);if(lm)lm.forEach(l=>{let parts=l.replace(/【新地点:|】/g,'').split(',');if(parts.length>=3)newLocs.push({zone:parts[1].trim(),id:parts[0].trim().toLowerCase().replace(/\s/g,''),name:parts[0].trim(),desc:parts[2]?.trim()||"新地点"});});
     let mm=novel.match(/【剧情记忆:([^】]+)】/);if(mm)mem=mm[1].trim();
     let rcm=novel.match(/【关系变化:([^】]+)】/g);if(rcm)rcm.forEach(rc=>{let parts=rc.replace(/【关系变化:|】/g,'').split(',');if(parts.length>=2)relationChanges.push({name:parts[0].trim(),newRel:parts[1].trim()});});
-    // 新增：解析角色数值变动
     let cdm = novel.match(/【角色数值:([^】]+)】/g);
     if(cdm){
         cdm.forEach(cd => {
@@ -700,22 +702,13 @@ function applyRelationChange(name, newRel){
         ch.relationship = newRel;
         if(newRel === "lover"){
             ch.isLover = true;
-            // 自动联动：如果AI没给角色数值，默认好感+10
-            if(!pendingActionResult?.charDeltas?.some(cd=>cd.name===name)){
-                ch.affection = Math.min(100, ch.affection + 10);
-            }
         } else if(newRel === "enemy"){
             ch.isLover = false;
-            // 自动联动：默认好感-20
-            if(!pendingActionResult?.charDeltas?.some(cd=>cd.name===name)){
-                ch.affection = Math.max(0, ch.affection - 20);
-            }
         } else if(newRel === "acquaintance"){
             ch.isLover = false;
         }
     }
 }
-// 新增：应用角色数值变动
 function applyCharDeltas(charDeltas){
     if(!charDeltas) return;
     charDeltas.forEach(cd => {
@@ -727,11 +720,15 @@ function applyCharDeltas(charDeltas){
     });
 }
 
-// ==================== 预览模式新增：暂存与快照 ====================
+// ==================== 预览模式：玩家自由行动独立状态 ====================
 let pendingActionResult = null;
 let pendingActionSnapshot = null;
 let lastUserIntent = null;
-let lastActionContext = null;
+
+// ==================== 自主事件独立状态（用于睡觉弹窗） ====================
+let autonomousPendingResult = null;
+let autonomousSnapshot = null;
+let autonomousContext = null;
 
 function saveSnapshot(){
     pendingActionSnapshot = {
@@ -750,29 +747,10 @@ function restoreSnapshot(){
     storyMemories = pendingActionSnapshot.storyMemories;
     nextId = pendingActionSnapshot.nextId;
 }
-function applyPendingResult(){
-    if(!pendingActionResult) return;
-    applyDelta(pendingActionResult.delta);
-    applyCharDeltas(pendingActionResult.charDeltas);
-    for(let c of pendingActionResult.newChars) addNewCharacter(c);
-    for(let l of pendingActionResult.newLocs) addNewLocation(l);
-    for(let rc of pendingActionResult.relationChanges) applyRelationChange(rc.name, rc.newRel);
-    if(pendingActionResult.memory){
-        storyMemories.unshift({
-            time: getFullDate(),
-            location: `${game.currentZone}·${game.currentLocation}`,
-            intent: lastActionContext ? "自主事件" : "自由行动",
-            content: pendingActionResult.cleaned,
-            summary: pendingActionResult.memory
-        });
-        if(storyMemories.length > 40) storyMemories.pop();
-    }
-}
 function clearPendingAction(){
     pendingActionResult = null;
     pendingActionSnapshot = null;
     lastUserIntent = null;
-    lastActionContext = null;
 }
 
 function showActionResultPreview(cleanedText){
@@ -795,7 +773,12 @@ function showActionResultPreview(cleanedText){
 
 function confirmAction(){
     if(!pendingActionResult) return;
-    applyPendingResult();
+    applyDelta(pendingActionResult.delta);
+    applyCharDeltas(pendingActionResult.charDeltas);
+    for(let c of pendingActionResult.newChars) addNewCharacter(c);
+    for(let l of pendingActionResult.newLocs) addNewLocation(l);
+    for(let rc of pendingActionResult.relationChanges) applyRelationChange(rc.name, rc.newRel);
+    if(pendingActionResult.memory) addStoryMemory(pendingActionResult, "自由行动");
     advanceDay();
     moveCharactersRandomly();
     updateUI();
@@ -806,28 +789,14 @@ function confirmAction(){
 
 async function continueAction(){
     if(!pendingActionResult) return;
-    applyPendingResult();
-    advanceDay();
-    moveCharactersRandomly();
-    updateUI();
-    autoSave();
-
-    let continueIntent = `剧情继续发展：${lastUserIntent}`;
-    if(lastActionContext){
-        continueIntent = `基于上述事件，继续发生后续：${lastActionContext}`;
-    }
+    confirmAction(); // 先应用当前
+    // 继续：使用上次意图重新生成
     saveSnapshot();
-    lastUserIntent = continueIntent;
-
+    lastUserIntent = lastUserIntent; // 保持原意图
     let resultDiv = document.getElementById('freeActionResult');
     resultDiv.innerHTML = `<div class="loading-text">⏳ 正在生成后续剧情...</div>`;
     try{
-        let promptText;
-        if(lastActionContext){
-            promptText = buildPrompt("", false, lastActionContext, []);
-        } else {
-            promptText = buildPrompt(continueIntent, true, "", []);
-        }
+        let promptText = buildPrompt(lastUserIntent, true, "", []);
         let res = await generateEventPreview(promptText, false);
         if(res){
             pendingActionResult = res;
@@ -848,12 +817,7 @@ async function regenerateAction(){
     let resultDiv = document.getElementById('freeActionResult');
     resultDiv.innerHTML = `<div class="loading-text">⏳ 重新生成中...</div>`;
     try{
-        let promptText;
-        if(lastActionContext){
-            promptText = buildPrompt("", false, lastActionContext, []);
-        } else {
-            promptText = buildPrompt(lastUserIntent, true, "", []);
-        }
+        let promptText = buildPrompt(lastUserIntent, true, "", []);
         let res = await generateEventPreview(promptText, false);
         if(res){
             pendingActionResult = res;
@@ -932,101 +896,159 @@ function showResultMessage(msg, isError = false){
     }
 }
 
-// ==================== 自主事件（预览模式） ====================
+// ==================== 自主事件（睡觉专用，独立状态） ====================
 async function triggerAutonomousEventWithUI(){
     if(game.gameState!=="free" || game.inExile) return;
     let lovers = characters.filter(c=>c.relationship==="lover" && !c.inPrison);
     let confidants = characters.filter(c=>c.isConfidant && !c.inPrison);
-    let type=0;
-    if(lovers.length>=2 && Math.random()<0.3) type=1;
-    else if(confidants.length>=1 && Math.random()<0.3) type=2;
     let involved=[], context="";
-    if(type===1 && lovers.length>=2){
-        let idx1=Math.floor(Math.random()*lovers.length), idx2; do{ idx2=Math.floor(Math.random()*lovers.length); }while(idx1===idx2);
+
+    if(lovers.length>=2 && Math.random()<0.3){
+        let idx1=Math.floor(Math.random()*lovers.length), idx2;
+        do{ idx2=Math.floor(Math.random()*lovers.length); }while(idx1===idx2);
         involved=[lovers[idx1], lovers[idx2]];
         context=`两位情人 ${involved[0].name} 和 ${involved[1].name} 因皇后产生了嫉妒与争执。`;
-    } else if(type===2 && confidants.length>=1){
+    } else if(confidants.length>=1 && Math.random()<0.3){
         let c = confidants[Math.floor(Math.random()*confidants.length)];
         involved=[c];
         context=`心腹 ${c.name} 正在秘密策划一件有利于皇后的大事。`;
     } else {
-        let others = characters.filter(c=>c.name!=="腓特烈四世" && !c.inPrison && c.relationship!=="lover");
-        if(others.length>=2){
-            let idx1=Math.floor(Math.random()*others.length), idx2; do{ idx2=Math.floor(Math.random()*others.length); }while(idx1===idx2);
+        let others = characters.filter(c=>c.name!=="腓特烈四世" && !c.inPrison);
+        if(others.length >= 2){
+            let idx1=Math.floor(Math.random()*others.length), idx2;
+            do{ idx2=Math.floor(Math.random()*others.length); }while(idx1===idx2);
             involved=[others[idx1], others[idx2]];
-            context=`${involved[0].name} 与 ${involved[1].name} 在宫廷中发生了一场争执。`;
-        } else if(others.length===1){
+            context=`${involved[0].name} 与 ${involved[1].name} 在宫廷中发生了一场意外的互动。`;
+        } else if(others.length === 1){
             involved=[others[0]];
             context=`${involved[0].name} 独自在${involved[0].zone}徘徊，似乎心事重重。`;
-        } else return;
+        } else {
+            context = "宫廷中一片寂静，夜幕下只有巡逻士兵的脚步声。";
+            involved = [];
+        }
     }
-    saveSnapshot();
-    lastActionContext = context;
-    lastUserIntent = "";
+
+    // 独立快照
+    autonomousSnapshot = {
+        game: JSON.parse(JSON.stringify(game)),
+        characters: JSON.parse(JSON.stringify(characters)),
+        zones: JSON.parse(JSON.stringify(zones)),
+        storyMemories: JSON.parse(JSON.stringify(storyMemories)),
+        nextId: nextId
+    };
+    autonomousContext = context;
+
     let promptText = buildPrompt("", false, context, involved);
     let res = await generateEventPreview(promptText, true);
     if(res){
-        pendingActionResult = res;
+        autonomousPendingResult = res;
         showAutonomousModal(res.cleaned);
+    } else {
+        showResultMessage("自主事件生成失败，请重试。", true);
+        clearAutonomousPending();
     }
 }
+
 function showAutonomousModal(text){
     let modal = document.getElementById('autonomousEventModal');
     let textDiv = document.getElementById('autonomousEventText');
     textDiv.innerText = text;
     modal.style.display = 'flex';
 }
+
 function confirmAutonomous(){
-    if(!pendingActionResult) return;
-    applyPendingResult();
-    advanceDay();
-    moveCharactersRandomly();
+    if(!autonomousPendingResult) return;
+    applyAutonomousPending();
+    // 睡觉已推进时间，此处不再advanceDay
     updateUI();
     autoSave();
-    showResultMessage(`自主事件已记录：${pendingActionResult.memory}`, false);
-    clearPendingAction();
+    showResultMessage(`自主事件已记录：${autonomousPendingResult.memory}`, false);
+    clearAutonomousPending();
     document.getElementById('autonomousEventModal').style.display = 'none';
 }
+
 function cancelAutonomous(){
-    restoreSnapshot();
-    clearPendingAction();
+    if(autonomousSnapshot) restoreAutonomousSnapshot();
+    clearAutonomousPending();
     document.getElementById('autonomousEventModal').style.display = 'none';
     showResultMessage("已取消，该事件未记录。", false);
 }
+
 async function continueAutonomous(){
-    if(!pendingActionResult) return;
-    applyPendingResult();
-    advanceDay();
-    moveCharactersRandomly();
+    if(!autonomousPendingResult) return;
+    applyAutonomousPending();
     updateUI();
     autoSave();
 
-    saveSnapshot();
-    let continueContext = `基于上述事件，继续发生后续：${lastActionContext}`;
+    autonomousSnapshot = {
+        game: JSON.parse(JSON.stringify(game)),
+        characters: JSON.parse(JSON.stringify(characters)),
+        zones: JSON.parse(JSON.stringify(zones)),
+        storyMemories: JSON.parse(JSON.stringify(storyMemories)),
+        nextId: nextId
+    };
+    let continueContext = `基于上述事件，继续发生后续：${autonomousContext}`;
     let promptText = buildPrompt("", false, continueContext, []);
     let res = await generateEventPreview(promptText, true);
     if(res){
-        pendingActionResult = res;
+        autonomousPendingResult = res;
         document.getElementById('autonomousEventText').innerText = res.cleaned;
     } else {
         showResultMessage("生成后续剧情失败，请重试。", true);
-        clearPendingAction();
+        clearAutonomousPending();
         document.getElementById('autonomousEventModal').style.display = 'none';
     }
 }
+
 async function regenerateAutonomous(){
-    if(!pendingActionResult) return;
-    restoreSnapshot();
-    let promptText = buildPrompt("", false, lastActionContext, []);
+    if(!autonomousPendingResult) return;
+    restoreAutonomousSnapshot();
+    let promptText = buildPrompt("", false, autonomousContext, []);
     let res = await generateEventPreview(promptText, true);
     if(res){
-        pendingActionResult = res;
+        autonomousPendingResult = res;
         document.getElementById('autonomousEventText').innerText = res.cleaned;
     } else {
         showResultMessage("重新生成失败，请重试。", true);
-        clearPendingAction();
+        clearAutonomousPending();
         document.getElementById('autonomousEventModal').style.display = 'none';
     }
+}
+
+function applyAutonomousPending(){
+    if(!autonomousPendingResult) return;
+    applyDelta(autonomousPendingResult.delta);
+    applyCharDeltas(autonomousPendingResult.charDeltas);
+    for(let c of autonomousPendingResult.newChars) addNewCharacter(c);
+    for(let l of autonomousPendingResult.newLocs) addNewLocation(l);
+    for(let rc of autonomousPendingResult.relationChanges) applyRelationChange(rc.name, rc.newRel);
+    if(autonomousPendingResult.memory) addStoryMemory(autonomousPendingResult, "自主事件");
+}
+
+function restoreAutonomousSnapshot(){
+    if(!autonomousSnapshot) return;
+    game = autonomousSnapshot.game;
+    characters = autonomousSnapshot.characters;
+    zones = autonomousSnapshot.zones;
+    storyMemories = autonomousSnapshot.storyMemories;
+    nextId = autonomousSnapshot.nextId;
+}
+
+function clearAutonomousPending(){
+    autonomousPendingResult = null;
+    autonomousSnapshot = null;
+    autonomousContext = null;
+}
+
+function addStoryMemory(result, type){
+    storyMemories.unshift({
+        time: getFullDate(),
+        location: `${game.currentZone}·${game.currentLocation}`,
+        intent: type,
+        content: result.cleaned,
+        summary: result.memory
+    });
+    if(storyMemories.length > 40) storyMemories.pop();
 }
 
 // ==================== 人物交互 ====================
@@ -1151,7 +1173,6 @@ async function performAction(intent){
     if(!intent.trim()) return;
     saveSnapshot();
     lastUserIntent = intent;
-    lastActionContext = null;
     let resultDiv = document.getElementById('freeActionResult');
     resultDiv.style.display = 'block';
     resultDiv.innerHTML = `<div class="loading-text">⏳ AI思考中，请稍候...</div>`;
@@ -1172,17 +1193,32 @@ async function performAction(intent){
     }
 }
 function randomEvent(){ performAction("随机触发宫廷事件，根据当前剧情记忆和局势生成"); }
+
+// ==================== 睡觉功能（增强反馈，完全独立） ====================
 async function sleep(){
     if(game.gameState==="prison"){ prisonAction(); return; }
     if(game.gameState==="ghost"){ ghostAction(); return; }
-    showResultMessage("😴 你沉沉睡去...", false);
+
+    let resultDiv = document.getElementById('freeActionResult');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `<div class="loading-text">😴 你沉沉睡去，等待梦境中的故事...</div>`;
+
     advanceDay();
-    await triggerAutonomousEventWithUI();
     moveCharactersRandomly();
-    let r = ["做了一个模糊的梦","夜莺在窗外啼鸣","似乎听到走廊脚步声","睡得格外香甜","梦见北境雪原"][Math.floor(Math.random()*5)];
-    showResultMessage(`✨ ${r}`, false);
-    updateUI(); autoSave();
+
+    try {
+        await triggerAutonomousEventWithUI();
+        let r = ["做了一个模糊的梦","夜莺在窗外啼鸣","似乎听到走廊脚步声","睡得格外香甜","梦见北境雪原"][Math.floor(Math.random()*5)];
+        resultDiv.innerHTML = `<div>✨ ${r}</div><button class="action-sm" onclick="this.parentElement.style.display='none'">关闭</button>`;
+    } catch (e) {
+        resultDiv.innerHTML = `<div class="error-text">睡眠中发生错误: ${e.message}</div><button class="action-sm" onclick="this.parentElement.style.display='none'">关闭</button>`;
+        console.error(e);
+    }
+
+    updateUI();
+    autoSave();
 }
+
 function moveCharactersRandomly(){
     for(let c of characters){
         if(c.name==="腓特烈四世" || c.inPrison) continue;
