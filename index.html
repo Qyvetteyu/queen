@@ -246,7 +246,7 @@ const INTERACTION_PROMPT = `你是史诗宫廷小说的叙事者，文风细腻�
 【要求】
 1. 生成500字左右的具体叙事，详细描写皇后的举动、对方的反应、周边环境及心理活动。
 2. 叙事必须紧扣「{{actionType}}」这一动作，不得偏离主题。
-3. 根据动作性质合理调整人物关系与数值：索要金钱可能导致好感下降或提升；共度良宵可能增加好感并成为情人；强行要求会导致对方厌恶并大幅降好感；提拔心腹会提升忠诚并可能增加好感；分手会结束情人关系并降低好感。
+3. 根据动作性质合理调整人物关系与数值：索要金钱可能导致好感下降或提升；共度良宵可能增加好感并深化亲密关系；强行发生关系的后果视角色好感而定；诱惑成为情人可能大幅提升好感并发展为情人关系，也可能遭到拒绝导致好感下降；提拔心腹会提升忠诚并可能增加好感；分手会结束情人关系并降低好感。
 4. 必须在文末添加【数值变动:声望±X,密谋±X,金币±X,国王爱意±X,国王怀疑±X】（每次变动绝对值≤5）。
 5. 必须添加【剧情记忆:一句话摘要】。
 6. 若人物关系发生变化，添加【关系变化:角色名,新关系】（新关系必须为lover/enemy/acquaintance之一）。
@@ -611,6 +611,17 @@ function buildInteractionPrompt(targetChar, actionType){
     };
     let result = tpl;
     for(let [k,v] of Object.entries(base)) result = result.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), v);
+    
+    // 动态追加特殊规则（强行索要在高好感时变为惊喜）
+    let specialRule = "";
+    if(actionType === "强行发生关系"){
+        if(targetChar.affection >= 100){
+            specialRule = "\n【特殊规则】当前目标好感已达100，因此「强行发生关系」将化为惊喜的征服。对方不仅不会厌恶，反而会感到受宠若惊，好感可能不降反升（+1~+5），并可能直接成为情人或赠送大量财物。请据此生成叙事。";
+        } else {
+            specialRule = "\n【特殊规则】当前目标好感低于100，「强行发生关系」会导致对方厌恶并大幅降好感（-10~-20）。请据此生成叙事。";
+        }
+    }
+    result += specialRule;
     return result;
 }
 function parseAIResponse(novel){
@@ -846,6 +857,7 @@ function confirmAction(){
     advanceDay();
     moveCharactersRandomly();
     updateUI();
+    cleanupConfidants();
     autoSave();
     clearPendingAction();
     document.getElementById('freeActionResult').style.display = 'none';
@@ -1021,6 +1033,7 @@ function confirmAutonomous(){
     if(!autonomousPendingResult) return;
     applyAutonomousPending();
     updateUI();
+    cleanupConfidants();
     autoSave();
     showResultMessage(`自主事件已记录：${autonomousPendingResult.memory}`, false);
     clearAutonomousPending();
@@ -1145,9 +1158,17 @@ function showInteractionModal(text){
 function confirmInteraction(){
     if(!interactionPendingResult) return;
     applyInteractionPending();
+    // 新增：根据交互类型处理特殊状态（心腹、情人等）
+    if(interactionActionType === "提拔心腹" && interactionTarget && interactionTarget.loyalty >= 70){
+        interactionTarget.isConfidant = true;
+    }
+    if(interactionActionType === "诱惑成为情人" && interactionTarget && interactionTarget.relationship === "lover"){
+    interactionTarget.isLover = true;
+    }
     advanceDay();
     moveCharactersRandomly();
     updateUI();
+    cleanupConfidants();
     autoSave();
     showResultMessage(`交互事件已记录：${interactionPendingResult.memory}`, false);
     clearInteractionPending();
@@ -1234,17 +1255,22 @@ function requestMoney(c){
     triggerInteraction(c, "索要金钱");
 }
 function spendNight(c){
-    if(c.married && !c.polyamorous){
-        if(confirm(`${c.name} 已婚，是否让他/她离婚再成为情人？`)){
-            c.married = false;
-            showResultMessage(`${c.name} 与前任离婚。`, false);
-        } else return;
-    }
     triggerInteraction(c, "共度良宵");
 }
 function forceNight(c){
-    if(c.relationship==="lover"){ showResultMessage(`情人之间不存在强行要求选项。`, true); return; }
-    triggerInteraction(c, "强行要求");
+    if(c.relationship==="lover"){ showResultMessage(`情人之间不存在强行发生关系选项。`, true); return; }
+    triggerInteraction(c, "强行发生关系");
+}
+function seduce(c){
+    if(c.married && !c.polyamorous && c.name !== "理查德"){
+        if(confirm(`${c.name} 已婚，是否先让其与原配离婚？`)){
+            c.married = false;
+            showResultMessage(`${c.name} 与前任离婚。`, false);
+        } else {
+            return; // 玩家取消则中止诱惑
+        }
+    }
+    triggerInteraction(c, "诱惑成为情人");
 }
 function makeConfidant(c){
     if(c.loyalty<70){
@@ -1271,8 +1297,9 @@ function showPersonModal(id){
     let relationBadge = c.relationship==="lover"?"💕情人":c.relationship==="enemy"?"⚠️仇敌":"🤝结识";
     let extraButtons = (c.relationship === "lover") ? `<button id="breakUpBtn" class="action-sm">💔 分手</button>` : '';
 
-    let forceNightButton = (!c.isLover) ? '<button id="forceNightBtn" class="action-sm">⚠️ 强行要求</button>' : '';
-    let spendNightButton = (!c.isLover && !c.married && c.affection>=60) ? '<button id="spendNightBtn" class="action-sm">🌙 共度良宵</button>' : '';
+    let forceNightButton = (!c.isLover) ? '<button id="forceNightBtn" class="action-sm">⚠️ 强行发生关系</button>' : '';
+    let seduceButton = (!c.isLover && c.affection >= 60) ? '<button id="seduceBtn" class="action-sm">💋 诱惑</button>' : '';
+    let spendNightButton = (c.isLover) ? '<button id="spendNightBtn" class="action-sm">🌙 共度良宵</button>' : '';
 
     content.innerHTML = `
         <div class="char-profile">
@@ -1289,6 +1316,7 @@ function showPersonModal(id){
                 <button id="personActionBtn" class="action-sm">💬 自由行动</button>
                 <button id="personRandomBtn" class="action-sm">🎲 随机事件</button>
                 <button id="requestMoneyBtn" class="action-sm">💰 索要金钱</button>
+                ${seduceButton}
                 ${spendNightButton}
                 ${forceNightButton}
                 ${!isKing && !c.isConfidant && c.canBeConfidant!==false ? '<button id="makeConfidantBtn" class="action-sm">⭐ 提拔心腹</button>' : ''}
@@ -1311,6 +1339,7 @@ function showPersonModal(id){
     document.getElementById('requestMoneyBtn').onclick = ()=>{ requestMoney(c); closeModal(); };
     if(document.getElementById('spendNightBtn')) document.getElementById('spendNightBtn').onclick = ()=>{ spendNight(c); closeModal(); };
     if(document.getElementById('forceNightBtn')) document.getElementById('forceNightBtn').onclick = ()=>{ forceNight(c); closeModal(); };
+    if(document.getElementById('seduceBtn')) document.getElementById('seduceBtn').onclick = ()=>{ seduce(c); closeModal(); };
     if(document.getElementById('makeConfidantBtn')) document.getElementById('makeConfidantBtn').onclick = ()=>{ makeConfidant(c); closeModal(); };
     if(document.getElementById('trainBtn')) document.getElementById('trainBtn').onclick = ()=>{ showTrainDialog(c); closeModal(); };
     if(document.getElementById('promoteBtn')) document.getElementById('promoteBtn').onclick = ()=>{ if(promoteRank(c)) updateUI(); closeModal(); };
@@ -1379,6 +1408,14 @@ function moveCharactersRandomly(){
             let zoneObj = zones.find(z=>z.name===newZone);
             let newLoc = zoneObj.children[Math.floor(Math.random()*zoneObj.children.length)].id;
             c.zone = newZone; c.location = newLoc;
+        }
+    }
+}
+function cleanupConfidants(){
+    for(let c of characters){
+        if(c.isConfidant && c.loyalty < 70){
+            c.isConfidant = false;
+            showResultMessage(`${c.name} 因忠诚不足 ${c.loyalty}，已自动解除心腹身份。`, false);
         }
     }
 }
