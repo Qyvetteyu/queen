@@ -491,7 +491,7 @@ async function testAPIConnection() {
             },
             body: JSON.stringify({
                 model: model,
-                messages: [{ role: 'user', content: '你好，请回复“连接成功”四个字，不要有其他内容。' }],
+                messages: [{ role: 'user', content: '请回复“连接成功”四个字，不要有其他内容。' }],
                 max_tokens: 20,
                 temperature: 0
             })
