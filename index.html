@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>翡冷翠秘宫 · 自由纪元 | API工具增强版</title>
+    <title>王后模拟器</title>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -61,15 +61,15 @@
 <body>
 <div class="game-container">
     <div style="text-align:center; margin-bottom:12px;">
-        <h1 style="font-family:'Cormorant Garamond'; color:#f7e5c2; font-size:1.5rem;">⚜️ 翡冷翠秘宫 · 自由纪元 ⚜️</h1>
-        <p style="color:#dbbc8c; font-size:0.7rem;">AI工具增强 | 测试连接 | 获取模型列表</p>
+        <h1 style="font-family:'Cormorant Garamond'; color:#f7e5c2; font-size:1.5rem;">⚜️ 埃瑟兰秘宫 ⚜️</h1>
+        <p style="color:#dbbc8c; font-size:0.7rem;">王后模拟器</p>
     </div>
 
     <div id="creatorSection" class="glass-card" style="padding:16px; margin-bottom:16px;">
         <div style="height:3px; background:#c7a55b; width:100%; margin-bottom:12px;"></div>
         <h3 style="font-size:1rem;"><i class="fas fa-crown"></i> 自定身份</h3>
-        <textarea id="appearanceInput" rows="2" placeholder="形象：银白长发，紫罗兰眼眸，冷艳孤傲"></textarea>
-        <textarea id="identityInput" rows="2" placeholder="背景：北境遗族公主，和亲翡冷翠，精通占星与毒药"></textarea>
+        <textarea id="appearanceInput" rows="2" placeholder="形象：银白长发，紫罗兰眼眸，冷艳孤傲（请填入外貌）"></textarea>
+        <textarea id="identityInput" rows="2" placeholder="背景：北境遗族公主，和亲埃瑟兰，精通占星与毒药，性格阴狠。（请填入背景与性格等特征）"></textarea>
         <button id="confirmIdentityBtn" class="btn-gold" style="width:100%; margin-top:8px;">加冕 · 开启纪元</button>
     </div>
 
@@ -83,7 +83,7 @@
             <div class="stat-tile">⚰️ 状态<div class="stat-number" id="gameState">自由</div></div>
         </div>
         <div class="info-bar">
-            <i class="fas fa-clock"></i> <span id="fullDate">翡冷翠历元年 春 1月 1日</span> |
+            <i class="fas fa-clock"></i> <span id="fullDate">埃瑟兰历元年 春 1月 1日</span> |
             <i class="fas fa-map-marker-alt"></i> <span id="currentLocationDisplay">皇宫·寝宫</span> |
             <i class="fas fa-coins"></i> 国库: <span id="treasury">100000</span> |
             <i class="fas fa-heart"></i> 国王爱意: <span id="kingAffection">60</span> |
@@ -102,7 +102,7 @@
 
         <div id="tabExplore" class="tab-pane active-pane">
             <div class="glass-card" style="padding:12px;">
-                <h4 style="font-size:0.9rem;">🗺️ 翡冷翠大陆（点击区域展开/折叠）</h4>
+                <h4 style="font-size:0.9rem;">🗺️ 埃瑟兰大陆（点击区域展开/折叠）</h4>
                 <div id="locationsTree"></div>
                 <div id="locationDetailPanel" class="event-area" style="margin-top:12px;">
                     <div id="locationDetailText">点击地点查看详情</div>
@@ -170,18 +170,30 @@
         </div>
     </div>
 </div>
+<!-- 新增：人物交互专用弹窗 -->
+<div id="interactionModal" class="modal" style="display:none;">
+    <div class="modal-content" id="interactionModalContent">
+        <div id="interactionText" style="white-space:pre-wrap; margin-bottom:12px;"></div>
+        <div class="flex-btns">
+            <button id="confirmInteractionBtn" class="action-sm">✅ 确定</button>
+            <button id="continueInteractionBtn" class="action-sm">▶️ 继续</button>
+            <button id="regenerateInteractionBtn" class="action-sm">🔄 重新生成</button>
+            <button id="cancelInteractionBtn" class="action-sm">❌ 取消</button>
+        </div>
+    </div>
+</div>
 
 <script>
 // ==================== 特殊人物背景 ====================
 const SPECIAL_CHARACTER_BACKGROUNDS = {
-    "腓特烈四世": "国王，自幼丧母，在残酷的宫廷斗争中从兄弟姐妹中一路杀到王位，性格果决冷酷，不轻易信任他人。他重视力量与忠诚，对皇后既有政治联姻的责任感，也有微妙的情感。",
+    "理查德": "国王，自幼丧母，在残酷的宫廷斗争中从兄弟姐妹中一路杀到王位，性格果决冷酷，不轻易信任他人。他重视力量与忠诚，对皇后既有政治联姻的责任感，也有微妙的情感。",
     "雷奥纳多": "将军，出身贵族，比国王大五岁，自幼与国王相识，是国王最信任的童年伙伴。常年征战在外，如今边境安定才返回宫廷继续效力。他忠诚、沉稳，但常年征战使他身上带着沙场的冷峻。",
     "塞西莉亚": "侍女长，曾是王太后的贴身侍女，知道太多宫廷秘密。她有一个私生子被秘密送出宫廷，这是她最大的软肋。她谨慎圆滑，善于在各方势力间周旋。",
     "洛伦佐": "书记官，实际上是邻国派来的间谍，但他逐渐被皇后的魅力所吸引，内心充满矛盾。他文弱浪漫，热爱诗歌，但也身负秘密使命。",
     "伊莎贝拉": "修女，真实身份是被流放的贵族之女，因家族变故躲入教堂避祸。她表面虔诚禁欲，实则对宫廷爱恨交织。"
 };
 
-// ==================== 增强束缚力的提示词模板 ====================
+// ==================== 提示词模板 ====================
 const PLAYER_ACTION_PROMPT = `你是史诗宫廷小说的叙事者，文风华丽细腻，擅长心理描写与权谋博弈。你必须严格遵循以下指令，不得遗漏任何标记。
 
 【皇后】形象: {{appearance}} 背景: {{identity}} 性格: 冷艳、隐忍、狡黠、深藏野心。
@@ -219,6 +231,26 @@ const AUTONOMOUS_EVENT_PROMPT = `你是史诗宫廷小说的叙事者，文风�
 5. 必须添加【剧情记忆:一句话摘要】。
 6. 若人物关系发生变化，添加【关系变化:角色名,新关系】（新关系必须为lover/enemy/acquaintance之一）。
 7. 若任一角色的好感或忠诚发生变化，必须添加【角色数值:角色名,好感±X,忠诚±Y】。若无变化则省略。例如：【角色数值:雷奥纳多,好感-3】。
+8. 以上所有标记必须出现在叙事末尾，严格按照格式书写。`;
+
+// 新增：人物交互专用提示词模板
+const INTERACTION_PROMPT = `你是史诗宫廷小说的叙事者，文风细腻。根据以下设定生成500字左右的叙事，聚焦皇后与目标人物的直接互动。必须严格遵循以下指令。
+
+【皇后】形象: {{appearance}} 背景: {{identity}}
+【目标人物】{{targetName}} ({{targetType}})，好感{{targetAffection}}，忠诚{{targetLoyalty}}，当前关系{{targetRelation}}
+【特殊人物背景】（请参考，不得OOC）{{specialBackgrounds}}
+【互动动作】皇后对{{targetName}}执行了「{{actionType}}」。
+【当前状态】声望: {{prestige}} 密谋: {{intrigue}} 金币: {{gold}} 国王爱意: {{kingAffection}} 国王怀疑: {{kingSuspicion}}
+【时间地点】{{fullDate}} · {{location}}
+
+【要求】
+1. 生成500字左右的具体叙事，详细描写皇后的举动、对方的反应、周边环境及心理活动。
+2. 叙事必须紧扣「{{actionType}}」这一动作，不得偏离主题。
+3. 根据动作性质合理调整人物关系与数值：索要金钱可能导致好感下降或提升；共度良宵可能增加好感并成为情人；强行要求会导致对方厌恶并大幅降好感；提拔心腹会提升忠诚并可能增加好感；分手会结束情人关系并降低好感。
+4. 必须在文末添加【数值变动:声望±X,密谋±X,金币±X,国王爱意±X,国王怀疑±X】（每次变动绝对值≤5）。
+5. 必须添加【剧情记忆:一句话摘要】。
+6. 若人物关系发生变化，添加【关系变化:角色名,新关系】（新关系必须为lover/enemy/acquaintance之一）。
+7. 若任一角色的好感或忠诚发生变化，必须添加【角色数值:角色名,好感±X,忠诚±Y】。若无变化则省略。
 8. 以上所有标记必须出现在叙事末尾，严格按照格式书写。`;
 
 // ==================== 游戏核心状态 ====================
@@ -273,7 +305,7 @@ const rankTree = [
 let characters=[], nextId=10;
 function initCharacters(){
     characters = [
-        { id:1, name:"腓特烈四世", type:"国王", zone:"皇宫", location:"王座厅", affection:45, loyalty:60, relationship:"acquaintance", isLover:false, isConfidant:false, personality:"冷酷果决", loveStyle:"独占", desc:"从血路杀出的君王", combat:70, intelligence:80, diplomacy:75, canBeConfidant:false, rankIdx:-1, wealth:999999, salary:100000, married:true, polyamorous:false, inPrison:false },
+        { id:1, name:"理查德", type:"国王", zone:"皇宫", location:"王座厅", affection:45, loyalty:60, relationship:"acquaintance", isLover:false, isConfidant:false, personality:"冷酷果决", loveStyle:"独占", desc:"从血路杀出的君王", combat:70, intelligence:80, diplomacy:75, canBeConfidant:false, rankIdx:-1, wealth:999999, salary:100000, married:true, polyamorous:false, inPrison:false },
         { id:2, name:"雷奥纳多", type:"将军", zone:"皇宫", location:"骑士营地", affection:55, loyalty:72, relationship:"acquaintance", isLover:false, isConfidant:false, personality:"沉稳忠诚", loveStyle:"深沉", desc:"国王挚友，常胜将军", combat:90, intelligence:65, diplomacy:60, canBeConfidant:true, rankIdx:3, wealth:800, salary:rankTree[3].salary, married:false, polyamorous:false, inPrison:false },
         { id:3, name:"塞西莉亚", type:"侍女长", zone:"皇宫", location:"御膳房", affection:60, loyalty:65, relationship:"acquaintance", isLover:false, isConfidant:false, personality:"谨慎", loveStyle:"忠诚", desc:"宫中老人", combat:25, intelligence:75, diplomacy:70, canBeConfidant:true, rankIdx:2, wealth:200, salary:rankTree[2].salary, married:true, polyamorous:false, inPrison:false },
         { id:4, name:"洛伦佐", type:"书记官", zone:"皇宫", location:"藏书塔", affection:50, loyalty:55, relationship:"acquaintance", isLover:false, isConfidant:false, personality:"文弱", loveStyle:"浪漫", desc:"诗人", combat:20, intelligence:80, diplomacy:65, canBeConfidant:true, rankIdx:1, wealth:150, salary:rankTree[1].salary, married:false, polyamorous:false, inPrison:false },
@@ -295,7 +327,7 @@ function getSpecialBackgroundsString(){
 // ==================== 时间系统 ====================
 function getFullDate(){
     let seasons=["春","夏","秋","冬"];
-    return `翡冷翠历 ${game.year}年 ${seasons[game.seasonIndex]} ${game.month}月 ${game.day}日`;
+    return `埃瑟兰历 ${game.year}年 ${seasons[game.seasonIndex]} ${game.month}月 ${game.day}日`;
 }
 function advanceDay(extraDays=1){
     for(let i=0;i<extraDays;i++){
@@ -530,7 +562,7 @@ async function fetchModels() {
 function buildPrompt(intent, isPlayerAction=true, eventContext="", involvedChars=[]){
     let tpl = isPlayerAction ? apiConfig.promptTemplate : AUTONOMOUS_EVENT_PROMPT;
     let mem=storyMemories.slice(-8).map((m,i)=>`[${i+1}] ${m.summary}`).join("\n")||"无";
-    let rel=characters.filter(c=>c.name!=="腓特烈四世").map(c=>`${c.name}:好感${c.affection},忠诚${c.loyalty},关系${c.relationship}`).join("\n");
+    let rel=characters.filter(c=>c.name!=="理查德").map(c=>`${c.name}:好感${c.affection},忠诚${c.loyalty},关系${c.relationship}`).join("\n");
     let specialBGs = getSpecialBackgroundsString();
     let base = {
         appearance: game.appearance||"皇后",
@@ -551,6 +583,32 @@ function buildPrompt(intent, isPlayerAction=true, eventContext="", involvedChars
         base.eventContext = eventContext;
         base.characters = involvedChars.map(c=>`${c.name}(${c.type},好感${c.affection})`).join(", ");
     }
+    let result = tpl;
+    for(let [k,v] of Object.entries(base)) result = result.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), v);
+    return result;
+}
+// 新增：构建交互提示词
+function buildInteractionPrompt(targetChar, actionType){
+    let tpl = INTERACTION_PROMPT;
+    let specialBGs = getSpecialBackgroundsString();
+    let base = {
+        appearance: game.appearance||"皇后",
+        identity: game.identity||"贵女",
+        targetName: targetChar.name,
+        targetType: targetChar.type,
+        targetAffection: targetChar.affection,
+        targetLoyalty: targetChar.loyalty,
+        targetRelation: targetChar.relationship,
+        actionType: actionType,
+        prestige: game.prestige,
+        intrigue: game.intrigue,
+        gold: game.gold,
+        kingAffection: game.king.affection,
+        kingSuspicion: game.king.suspicion,
+        fullDate: getFullDate(),
+        location: `${game.currentZone}·${game.currentLocation}`,
+        specialBackgrounds: specialBGs
+    };
     let result = tpl;
     for(let [k,v] of Object.entries(base)) result = result.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), v);
     return result;
@@ -730,6 +788,12 @@ let autonomousPendingResult = null;
 let autonomousSnapshot = null;
 let autonomousContext = null;
 
+// ==================== 人物交互独立状态 ====================
+let interactionPendingResult = null;
+let interactionSnapshot = null;
+let interactionTarget = null;
+let interactionActionType = null;
+
 function saveSnapshot(){
     pendingActionSnapshot = {
         game: JSON.parse(JSON.stringify(game)),
@@ -789,10 +853,8 @@ function confirmAction(){
 
 async function continueAction(){
     if(!pendingActionResult) return;
-    confirmAction(); // 先应用当前
-    // 继续：使用上次意图重新生成
+    confirmAction();
     saveSnapshot();
-    lastUserIntent = lastUserIntent; // 保持原意图
     let resultDiv = document.getElementById('freeActionResult');
     resultDiv.innerHTML = `<div class="loading-text">⏳ 正在生成后续剧情...</div>`;
     try{
@@ -913,7 +975,7 @@ async function triggerAutonomousEventWithUI(){
         involved=[c];
         context=`心腹 ${c.name} 正在秘密策划一件有利于皇后的大事。`;
     } else {
-        let others = characters.filter(c=>c.name!=="腓特烈四世" && !c.inPrison);
+        let others = characters.filter(c=>c.name!=="理查德" && !c.inPrison);
         if(others.length >= 2){
             let idx1=Math.floor(Math.random()*others.length), idx2;
             do{ idx2=Math.floor(Math.random()*others.length); }while(idx1===idx2);
@@ -928,7 +990,6 @@ async function triggerAutonomousEventWithUI(){
         }
     }
 
-    // 独立快照
     autonomousSnapshot = {
         game: JSON.parse(JSON.stringify(game)),
         characters: JSON.parse(JSON.stringify(characters)),
@@ -959,7 +1020,6 @@ function showAutonomousModal(text){
 function confirmAutonomous(){
     if(!autonomousPendingResult) return;
     applyAutonomousPending();
-    // 睡觉已推进时间，此处不再advanceDay
     updateUI();
     autoSave();
     showResultMessage(`自主事件已记录：${autonomousPendingResult.memory}`, false);
@@ -1051,16 +1111,169 @@ function addStoryMemory(result, type){
     if(storyMemories.length > 40) storyMemories.pop();
 }
 
-// ==================== 人物交互 ====================
+// ==================== 人物交互（独立弹窗+AI叙事） ====================
+async function triggerInteraction(c, actionType){
+    if(game.gameState!=="free" || game.inExile){ showResultMessage("当前状态无法行动", true); return; }
+    // 保存快照
+    interactionSnapshot = {
+        game: JSON.parse(JSON.stringify(game)),
+        characters: JSON.parse(JSON.stringify(characters)),
+        zones: JSON.parse(JSON.stringify(zones)),
+        storyMemories: JSON.parse(JSON.stringify(storyMemories)),
+        nextId: nextId
+    };
+    interactionTarget = c;
+    interactionActionType = actionType;
+
+    let promptText = buildInteractionPrompt(c, actionType);
+    let res = await generateEventPreview(promptText, false);
+    if(res){
+        interactionPendingResult = res;
+        showInteractionModal(res.cleaned);
+    } else {
+        showResultMessage("交互事件生成失败，请重试。", true);
+        clearInteractionPending();
+    }
+}
+
+function showInteractionModal(text){
+    let modal = document.getElementById('interactionModal');
+    document.getElementById('interactionText').innerText = text;
+    modal.style.display = 'flex';
+}
+
+function confirmInteraction(){
+    if(!interactionPendingResult) return;
+    applyInteractionPending();
+    advanceDay();
+    moveCharactersRandomly();
+    updateUI();
+    autoSave();
+    showResultMessage(`交互事件已记录：${interactionPendingResult.memory}`, false);
+    clearInteractionPending();
+    document.getElementById('interactionModal').style.display = 'none';
+}
+
+function cancelInteraction(){
+    if(interactionSnapshot) restoreInteractionSnapshot();
+    clearInteractionPending();
+    document.getElementById('interactionModal').style.display = 'none';
+    showResultMessage("已取消，该事件未记录。", false);
+}
+
+async function continueInteraction(){
+    if(!interactionPendingResult) return;
+    applyInteractionPending();
+    advanceDay();
+    moveCharactersRandomly();
+    updateUI();
+    autoSave();
+
+    interactionSnapshot = {
+        game: JSON.parse(JSON.stringify(game)),
+        characters: JSON.parse(JSON.stringify(characters)),
+        zones: JSON.parse(JSON.stringify(zones)),
+        storyMemories: JSON.parse(JSON.stringify(storyMemories)),
+        nextId: nextId
+    };
+    let promptText = buildInteractionPrompt(interactionTarget, interactionActionType);
+    let res = await generateEventPreview(promptText, false);
+    if(res){
+        interactionPendingResult = res;
+        document.getElementById('interactionText').innerText = res.cleaned;
+    } else {
+        showResultMessage("生成后续剧情失败，请重试。", true);
+        clearInteractionPending();
+        document.getElementById('interactionModal').style.display = 'none';
+    }
+}
+
+async function regenerateInteraction(){
+    if(!interactionPendingResult) return;
+    restoreInteractionSnapshot();
+    let promptText = buildInteractionPrompt(interactionTarget, interactionActionType);
+    let res = await generateEventPreview(promptText, false);
+    if(res){
+        interactionPendingResult = res;
+        document.getElementById('interactionText').innerText = res.cleaned;
+    } else {
+        showResultMessage("重新生成失败，请重试。", true);
+        clearInteractionPending();
+        document.getElementById('interactionModal').style.display = 'none';
+    }
+}
+
+function applyInteractionPending(){
+    if(!interactionPendingResult) return;
+    applyDelta(interactionPendingResult.delta);
+    applyCharDeltas(interactionPendingResult.charDeltas);
+    for(let c of interactionPendingResult.newChars) addNewCharacter(c);
+    for(let l of interactionPendingResult.newLocs) addNewLocation(l);
+    for(let rc of interactionPendingResult.relationChanges) applyRelationChange(rc.name, rc.newRel);
+    if(interactionPendingResult.memory) addStoryMemory(interactionPendingResult, interactionActionType);
+}
+
+function restoreInteractionSnapshot(){
+    if(!interactionSnapshot) return;
+    game = interactionSnapshot.game;
+    characters = interactionSnapshot.characters;
+    zones = interactionSnapshot.zones;
+    storyMemories = interactionSnapshot.storyMemories;
+    nextId = interactionSnapshot.nextId;
+}
+
+function clearInteractionPending(){
+    interactionPendingResult = null;
+    interactionSnapshot = null;
+    interactionTarget = null;
+    interactionActionType = null;
+}
+
+// ==================== 人物交互（替换原有函数，改为触发AI叙事） ====================
+function requestMoney(c){
+    triggerInteraction(c, "索要金钱");
+}
+function spendNight(c){
+    if(c.married && !c.polyamorous){
+        if(confirm(`${c.name} 已婚，是否让他/她离婚再成为情人？`)){
+            c.married = false;
+            showResultMessage(`${c.name} 与前任离婚。`, false);
+        } else return;
+    }
+    triggerInteraction(c, "共度良宵");
+}
+function forceNight(c){
+    if(c.relationship==="lover"){ showResultMessage(`情人之间不存在强行要求选项。`, true); return; }
+    triggerInteraction(c, "强行要求");
+}
+function makeConfidant(c){
+    if(c.loyalty<70){
+        showResultMessage(`忠诚不足70，无法成为心腹`, true);
+        return;
+    }
+    triggerInteraction(c, "提拔心腹");
+}
+async function breakUpWithLover(c){
+    if(!c.isLover) return;
+    if(confirm(`确定要与 ${c.name} 分手吗？这将触发一段剧情，并可能影响双方关系。`)){
+        triggerInteraction(c, "分手");
+    }
+}
+
+// ==================== 人物弹窗绑定 ====================
 function showPersonModal(id){
     let c = characters.find(c=>c.id===id); if(!c) return;
     let modal = document.getElementById('charModal');
     let content = document.getElementById('charModalContent');
-    let isKing = (c.name === "腓特烈四世");
+    let isKing = (c.name === "理查德");
     let rankDisplay = isKing ? "国王" : (c.rankIdx>=0 ? rankTree[c.rankIdx].name : "无");
     let attrs = `<span class="stat-badge">⚔️武艺:${c.combat||30}</span><span class="stat-badge">📚智谋:${c.intelligence||50}</span><span class="stat-badge">🤝外交:${c.diplomacy||50}</span><span class="stat-badge">❤️好感:${c.affection}</span><span class="stat-badge">⚔️忠诚:${c.loyalty}</span><span class="stat-badge">💰财产:${c.wealth||0}</span><span class="stat-badge">🏅${rankDisplay}</span>`;
     let relationBadge = c.relationship==="lover"?"💕情人":c.relationship==="enemy"?"⚠️仇敌":"🤝结识";
     let extraButtons = (c.relationship === "lover") ? `<button id="breakUpBtn" class="action-sm">💔 分手</button>` : '';
+
+    let forceNightButton = (!c.isLover) ? '<button id="forceNightBtn" class="action-sm">⚠️ 强行要求</button>' : '';
+    let spendNightButton = (!c.isLover && !c.married && c.affection>=60) ? '<button id="spendNightBtn" class="action-sm">🌙 共度良宵</button>' : '';
+
     content.innerHTML = `
         <div class="char-profile">
             <h3>${c.name} <span style="font-size:0.7rem">(${c.type})</span> <span class="stat-badge">${relationBadge}</span></h3>
@@ -1076,8 +1289,8 @@ function showPersonModal(id){
                 <button id="personActionBtn" class="action-sm">💬 自由行动</button>
                 <button id="personRandomBtn" class="action-sm">🎲 随机事件</button>
                 <button id="requestMoneyBtn" class="action-sm">💰 索要金钱</button>
-                ${!c.isLover && !c.married && c.affection>=60 ? '<button id="spendNightBtn" class="action-sm">🌙 共度良宵</button>' : ''}
-                ${(!c.isLover && c.married && !c.polyamorous) ? '<button id="forceNightBtn" class="action-sm">⚠️ 强行要求</button>' : ''}
+                ${spendNightButton}
+                ${forceNightButton}
                 ${!isKing && !c.isConfidant && c.canBeConfidant!==false ? '<button id="makeConfidantBtn" class="action-sm">⭐ 提拔心腹</button>' : ''}
                 ${!isKing && c.isConfidant ? '<button id="trainBtn" class="action-sm">📈 深度培养</button>' : ''}
                 ${!isKing && canPromote(c) ? '<button id="promoteBtn" class="action-sm">🏆 晋升官职</button>' : ''}
@@ -1104,68 +1317,6 @@ function showPersonModal(id){
     if(document.getElementById('breakUpBtn')) document.getElementById('breakUpBtn').onclick = ()=>{ breakUpWithLover(c); closeModal(); };
 }
 function closeModal(){ document.getElementById('charModal').style.display='none'; }
-async function breakUpWithLover(c){
-    if(!c.isLover) return;
-    if(confirm(`确定要与 ${c.name} 分手吗？这将触发一段剧情，并可能影响双方关系。`)){
-        await performAction(`与情人 ${c.name} 正式分手，结束情人关系。`);
-    }
-}
-function requestMoney(c){
-    let give=0;
-    if(c.affection>=80) give = Math.min(c.wealth, Math.floor(c.wealth*0.3));
-    else if(c.affection>=60) give = Math.min(c.wealth, Math.floor(c.wealth*0.1));
-    else if(c.affection>=40) give = Math.min(c.wealth, Math.floor(c.wealth*0.05));
-    if(give>0){
-        c.wealth -= give;
-        game.gold += give;
-        showResultMessage(`${c.name} 赠予你 ${give} 金币。`, false);
-        if(c.affection>70) c.affection+=2; else c.affection-=3;
-    } else {
-        showResultMessage(`${c.name} 拒绝了你的索要。好感下降。`, true);
-        c.affection = Math.max(0,c.affection-5);
-    }
-    updateUI(); autoSave();
-}
-function spendNight(c){
-    if(c.married && !c.polyamorous){
-        if(confirm(`${c.name} 已婚，是否让他/她离婚再成为情人？`)){
-            c.married = false;
-            showResultMessage(`${c.name} 与前任离婚。`, false);
-        } else return;
-    }
-    if(c.relationship==="lover" || c.affection>=60){
-        if(c.relationship!=="lover"){ c.relationship="lover"; c.isLover=true; showResultMessage(`💕 你与 ${c.name} 成为情人！`, false); }
-        else showResultMessage(`💕 你与 ${c.name} 度过良宵。`, false);
-        c.affection = Math.min(100,c.affection+5);
-        game.king.suspicion = Math.min(100,game.king.suspicion+8);
-        showResultMessage(`国王怀疑值 +8，当前怀疑 ${game.king.suspicion}`, false);
-    } else {
-        showResultMessage(`❌ ${c.name} 拒绝。好感下降。`, true);
-        c.affection = Math.max(0,c.affection-10);
-        game.prestige = Math.max(0,game.prestige-5);
-        game.king.suspicion = Math.min(100,game.king.suspicion+5);
-        showResultMessage(`声望 -5，国王怀疑 +5`, true);
-    }
-    updateUI(); autoSave();
-}
-function forceNight(c){
-    if(c.relationship==="lover"){ showResultMessage(`情人之间不存在强行要求选项。`, true); return; }
-    showResultMessage(`⚠️ 你强行要求 ${c.name}，对方厌恶。`, true);
-    c.affection = Math.max(0,c.affection-15);
-    game.prestige = Math.max(0,game.prestige-8);
-    game.king.suspicion = Math.min(100,game.king.suspicion+10);
-    showResultMessage(`好感 -15，声望 -8，国王怀疑 +10`, true);
-    updateUI(); autoSave();
-}
-function makeConfidant(c){
-    if(c.loyalty>=70){
-        c.isConfidant = true;
-        showResultMessage(`⭐ ${c.name} 成为心腹！`, false);
-    } else {
-        showResultMessage(`忠诚不足70，无法成为心腹`, true);
-    }
-    updateUI(); autoSave();
-}
 
 // ==================== 玩家行动（预览版） ====================
 async function performAction(intent){
@@ -1221,7 +1372,7 @@ async function sleep(){
 
 function moveCharactersRandomly(){
     for(let c of characters){
-        if(c.name==="腓特烈四世" || c.inPrison) continue;
+        if(c.name==="理查德" || c.inPrison) continue;
         if(Math.random()<0.25){
             let zoneNames = ["皇宫","野外","王都"];
             let newZone = zoneNames[Math.floor(Math.random()*zoneNames.length)];
@@ -1262,7 +1413,7 @@ function updateUI(){
 function renderLists(){
     let allDiv = document.getElementById('allCharactersList');
     if(allDiv) allDiv.innerHTML = characters.map(c=>{
-        let rankDisplay = (c.name==="腓特烈四世") ? "国王" : (c.rankIdx>=0 ? rankTree[c.rankIdx].name : "无");
+        let rankDisplay = (c.name==="理查德") ? "国王" : (c.rankIdx>=0 ? rankTree[c.rankIdx].name : "无");
         return `<div class="person-card" onclick="showPersonModal(${c.id})"><b>${c.name}</b> (${c.type}) <span class="stat-badge">${rankDisplay}</span> ${c.relationship==="lover"?"💕情人":c.relationship==="enemy"?"⚠️仇敌":"🤝结识"}<br>❤️${c.affection} 📍${c.zone}·${c.location}</div>`;
     }).join('');
     let loversDiv = document.getElementById('loversList');
@@ -1297,7 +1448,7 @@ function exportGame(){
     let url = URL.createObjectURL(blob);
     let a = document.createElement('a');
     a.href = url;
-    a.download = `翡冷翠存档_${game.year}年${game.month}月${game.day}日.json`;
+    a.download = `埃瑟兰存档_${game.year}年${game.month}月${game.day}日.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1414,6 +1565,11 @@ document.getElementById('confirmAutonomousBtn').onclick = confirmAutonomous;
 document.getElementById('cancelAutonomousBtn').onclick = cancelAutonomous;
 document.getElementById('regenerateAutonomousBtn').onclick = regenerateAutonomous;
 document.getElementById('continueAutonomousBtn').onclick = continueAutonomous;
+
+document.getElementById('confirmInteractionBtn').onclick = confirmInteraction;
+document.getElementById('cancelInteractionBtn').onclick = cancelInteraction;
+document.getElementById('regenerateInteractionBtn').onclick = regenerateInteraction;
+document.getElementById('continueInteractionBtn').onclick = continueInteraction;
 
 window.onload = ()=>{
     loadApiConfig();
